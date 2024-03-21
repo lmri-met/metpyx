@@ -64,7 +64,7 @@ Distributed under the [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/) 
 
 <a name="contribute"></a>
 ## Contribute
-Contributions are welcome. Please check the [issues page](https://github.com/xandratxan/physical-magnitude/issues) if you want to contribute.
+Contributions are welcome. Please check the [issues page](https://github.com/lmri-met/xmet/issues) if you want to contribute.
 
 <a name="support"></a>
 ## Support
