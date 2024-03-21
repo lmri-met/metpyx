@@ -13,10 +13,10 @@
 ![GitHub forks](https://img.shields.io/github/forks/lmri-met/xmet)
 
 > Tools for x-ray metrology
-> 
-> ![Static Badge](https://img.shields.io/badge/Documentation-blue?link=https%3A%2F%2Fgithub.com%2Flmri-met%2Fxmet%2Fblob%2Fmain%2FREADME.md)
-> ![Static Badge](https://img.shields.io/badge/Surce_code-blue?link=https%3A%2F%2Fgithub.com%2Flmri-met%2Fxmet)
-> ![Static Badge](https://img.shields.io/badge/Contribute-blue?link=https%3A%2F%2Fgithub.com%2Flmri-met%2Fxmet%2Fissues)
+>
+> [![Static Badge](https://img.shields.io/badge/Documentation-blue)](https://github.com/lmri-met/xmet/blob/main/README.md)
+> [![Static Badge](https://img.shields.io/badge/Surce_code-blue)](https://github.com/lmri-met/xmet)
+> [![Static Badge](https://img.shields.io/badge/Contribute-blue)](https://github.com/lmri-met/xmet/issues)
 
 ## Table of Contents
 - [Description](#description)
