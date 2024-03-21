@@ -1,19 +1,23 @@
 {
-  "name": "uspekpy",
-  "description": "Uncertainty estimation on protection quantities for x-rays using SpekPy and Monte Carlo techniques",
+  "name": "xmet",
+  "description": "Tools for x-ray metrology",
   "version": "0.1.0",
-  "keywords": ["uncertainty", "x-rays", "spectrum", "monte carlo"],
+  "keywords": ["x-rays", "metrology"],
+  "contributors": [
+    "Xandra Campo <xandra.campo@ciemat.es>",
+    "Miguel Embid <miguel.embid@ciemat.es>"
+  ]
   "author": {
-    "name": "Paz Aviles",
-    "email": "Paz.Aviles@ciemat.es"
+    "name": "Xandra Campo",
+    "email": "xandra.campo@ciemat.es"
   },
   "license": "GNU GPLv3",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lmri-met/uspekpy"
+    "url": "https://github.com/lmri-met/xmet"
   },
   "bugs": {
-    "url": "https://github.com/lmri-met/uspekpy/issues"
+    "url": "https://github.com/lmri-met/xmet/issues"
   },
-  "homepage": "https://github.com/lmri-met/uspekpy"
+  "homepage": "https://github.com/lmri-met/xmet"
 }
