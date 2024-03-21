@@ -5,12 +5,8 @@
   "keywords": ["x-rays", "metrology"],
   "contributors": [
     "Xandra Campo <xandra.campo@ciemat.es>",
-    "Miguel Embid <miguel.embid@ciemat.es>"
+    "Miguel Embid <miguel.embid@ciemat.es>",
   ],
-  "author": {
-    "name": "Xandra Campo",
-    "email": "xandra.campo@ciemat.es"
-  },
   "license": "GNU GPLv3",
   "repository": {
     "type": "git",
