@@ -1,19 +1,19 @@
 {
-  "name": "xmet",
-  "description": "Tools for x-ray metrology",
+  "name": "metpyx",
   "version": "0.1.0",
+  "description": "Tools for x-ray metrology",
   "keywords": ["x-rays", "metrology"],
   "contributors": [
     "Xandra Campo <xandra.campo@ciemat.es>",
-    "Miguel Embid <miguel.embid@ciemat.es>",
+    "Miguel Embid <miguel.embid@ciemat.es>"
   ],
   "license": "GNU GPLv3",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lmri-met/xmet"
+    "url": "https://github.com/lmri-met/metpyx"
   },
   "bugs": {
-    "url": "https://github.com/lmri-met/xmet/issues"
+    "url": "https://github.com/lmri-met/metpyx/issues"
   },
-  "homepage": "https://github.com/lmri-met/xmet"
+  "homepage": "https://github.com/lmri-met/metpyx"
 }
