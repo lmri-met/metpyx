@@ -82,17 +82,11 @@ class IonizationChamber:
         # Leakage current measurements (closed shutter)
         current_readings = self.measure_current_readings(time_readings=time_readings, charge_readings=charge_readings, open_shutter=False)
 
-        # Get mean of magnitudes
-        time = series_to_magnitude(series=time_readings, unit='s')
-        charge = series_to_magnitude(series=charge_readings, unit='C')
-        current = series_to_magnitude(series=current_readings, unit='A')
-
         # Define lists to build dataframe
         names = ['Leakage time', 'Leakage charge', 'Leakage current']
-        units = ['s', 'C' 'A']
+        units = ['s', 'C', 'A']
         readings = [time_readings, charge_readings, current_readings]
-        magnitudes = [time, charge, current]
-        # magnitudes = [series_to_magnitude(series=reading, unit=unit) for (reading, unit) in zip(readings, units)]
+        magnitudes = [series_to_magnitude(series=reading, unit=unit) for (reading, unit) in zip(readings, units)]
 
         # Build dataframe
         leakage = results_dataframe(names, readings, magnitudes)
@@ -106,17 +100,11 @@ class IonizationChamber:
             leak_current_value=mean_leakage_current, temperature_readings=temperature_readings,
             pressure_readings=pressure_readings)
 
-        # Get mean of magnitudes
-        time = series_to_magnitude(series=time_readings, unit='s')
-        pressure = series_to_magnitude(series=pressure_readings, unit='kPa')
-        temperature = series_to_magnitude(series=temperature_readings, unit='ºC')
-        charge = series_to_magnitude(series=charge_readings, unit='C')
-        current = series_to_magnitude(series=current_readings, unit='A')
-
         # Define lists to build dataframe
         names = ['Time', 'Pressure', 'Temperature', 'Charge', 'Current']
+        units = ['s', 'kPa', 'ºC', 'C', 'A']
         readings = [time_readings, pressure_readings, temperature_readings, charge_readings, current_readings]
-        magnitudes = [time, pressure, temperature, charge, current]
+        magnitudes = [series_to_magnitude(series=reading, unit=unit) for (reading, unit) in zip(readings, units)]
 
         # Build dataframe
         measurements_df = results_dataframe(names, readings, magnitudes)
@@ -127,13 +115,12 @@ class IonizationChamber:
         # Air kerma measurements (open shutter)
         air_kerma_readings = self.measure_air_kerma_readings(current_readings=current_readings,
                                                              radiation_quality=radiation_quality)
-        # Get mean of magnitudes
-        air_kerma = series_to_magnitude(series=air_kerma_readings, unit='Gy/s')
 
         # Define lists to build dataframe
         names = ['Air kerma']
+        units = ['Gy/s']
         readings = [air_kerma_readings]
-        magnitudes = [air_kerma]
+        magnitudes = [series_to_magnitude(series=reading, unit=unit) for (reading, unit) in zip(readings, units)]
 
         # Build dataframe
         measurements_df = results_dataframe(names, readings, magnitudes)
