@@ -1,5 +1,9 @@
 {
   "ns557": {
+    "electrometer range": {
+      "low": 1.001,
+      "high": 1.002
+    },
     "calibration coefficient": {
       "N-series": 43700,
       "W-series": 43080,
