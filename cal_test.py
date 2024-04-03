@@ -71,17 +71,32 @@ Note: All measurements: 5 measurements in 60 seconds
 """
 import json
 
+import numpy as np
+import pandas as pd
+
 from src.metpyx.ionization_chamber import IonizationChamber, get_radiation_quality_series
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-# 1. Select and read initial information:
+# 1. Select and read initial information
+# --------------------------------------
+
 # 1.1. Select initial information
+# -------------------------------
 # - Select measurement magnitude
 # - Select radiation quality
 # - Select quality series
 # - Select reference chamber (initially there will only be one, the 557, but there may be two)
-measurement_magnitude = None
+
+# 1.2. Read initial information
+# -----------------------------
+# - Read kerma-to-operational magnitude conversion coefficient (magnitude, quality).
+# - Read unit of integral and rate measurement magnitude
+# - Read chamber calibration factor for quality series
+# - Read correction factor of calibration factor for quality
+
+# User provided information
+measurement_magnitude = 'H*(10)'
 radiation_quality = 'L-170'
 conversion_coefficients = './assets/radiation_quality_data.csv'
 reference_chamber_id = 'ns557'
@@ -90,11 +105,65 @@ electrometer_range = 'low'
 monitor_chamber_id = 'monitor'
 detector = None
 output_file = './output.txt'
-# 1.2. Read initial information
-# - Read kerma-to-operational magnitude conversion coefficient (magnitude, quality).
-# - Read unit of integral and rate measurement magnitude
-# - Read chamber calibration factor for quality series
-# - Read correction factor of calibration factor for quality
+
+# Read radiation quality data file
+csv_data = pd.read_csv(conversion_coefficients, header=1)
+# Read reference ionization chamber data file
+with open(reference_chamber_data, 'r') as file:
+    json_data = json.load(file)
+# Define reference ionization chamber
+reference = IonizationChamber(identification=reference_chamber_id, calibrated=True, open_chamber=True, json_data=json_data)
+
+# Reference radiation information
+radiation_quality_series = get_radiation_quality_series(radiation_quality)
+air_width = 0.001293
+air_attenuation_coefficient = csv_data.loc[csv_data['Quality'] == 'L-170', 'mu_air'].values[0]
+conversion_coefficient = csv_data.loc[csv_data['Quality'] == 'L-170', f'h_k[{measurement_magnitude}]'].values[0]
+# Reference chamber information
+calibration_coefficient = json_data[reference_chamber_id]["calibration coefficient"][radiation_quality_series]
+correction_factor = json_data[reference_chamber_id]["correction factor"][radiation_quality]
+electrometer_range_correction = json_data[reference_chamber_id]["electrometer range"][electrometer_range]
+# Environmental conditions information
+reference_temperature = reference.REFERENCE_TEMPERATURE
+reference_pressure = reference.REFERENCE_PRESSURE
+# Other information
+celsius_to_kelvin = reference.CELSIUS_TO_KELVIN
+hour_to_second = reference.HOUR_TO_SECOND
+
+# Results
+section1 = (
+    f'IR-14D: Calibration of radiation measuring devices\n'
+    f'\n'
+    f'1. INITIAL INFORMATION\n'
+    f'\n'
+    f'1.1. Reference radiation:\n'
+    f'Radiation quality series: {radiation_quality_series}\n'
+    f'Radiation quality: {radiation_quality}\n'
+    f'Air attenuation coefficient: {air_attenuation_coefficient}\n'
+    f'Conversion coefficient: {conversion_coefficient}'
+    f'Data file: {conversion_coefficients}\n'
+    f'\n'
+    f'2.1. Reference chamber:\n'
+    f'Identification: {reference_chamber_id}\n'
+    f'Calibration coefficient: {calibration_coefficient}\n'
+    f'Correction factor: {correction_factor}\n'
+    f'Electrometer range: {electrometer_range}\n'
+    f'Electrometer range correction: {electrometer_range_correction}\n'
+    f'Data file: {reference_chamber_data}\n'
+    f'\n'
+    f'1.4. Environmental conditions:\n'
+    f'Reference temperature: {reference_temperature}\n'
+    f'Reference pressure: {reference_pressure}\n'
+    f'\n'
+    f'1.3. Other information\n'
+    f'Measurement magnitude: {measurement_magnitude}\n'
+    f'Monitor chamber ID: {monitor_chamber_id}\n'
+    f'Detector ID: {detector}\n'
+    f'Distance factor: {0.206378548} (WARNING! Hardcoded value)\n'  # TODO: Hardcoded value
+    f'Celsius to Kelvin conversion: {celsius_to_kelvin}\n'
+    f'Hour to seconds conversion: {hour_to_second}\n'
+    f'\n'
+)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -133,8 +202,10 @@ output_file = './output.txt'
 # Implementation
 
 # 2. Simultaneous measurements of the reference chamber and the monitoring chamber
+# --------------------------------------------------------------------------------
 
 # 2.1. Measurements of the monitoring chamber
+# -------------------------------------------
 # - Define monitor ionization chamber
 monitor = IonizationChamber(identification=monitor_chamber_id, calibrated=False, open_chamber=True)
 # - Time and charge readings for leakage current measurement (shutter closed)
@@ -154,12 +225,7 @@ monitor_measurement = monitor.measure(
     radiation_quality=None)
 
 # 2.2. Measurements of the reference chamber
-# - Read reference ionization chamber calibration coefficients and correction factors and electrometer range correction
-#   factors
-with open(reference_chamber_data, 'r') as file:
-    json_data = json.load(file)
-# - Define reference ionization chamber
-reference = IonizationChamber(identification=reference_chamber_id, calibrated=True, open_chamber=True, json_data=json_data)
+# ------------------------------------------
 # - Time and charge readings for leakage current measurement (shutter closed)
 reference_leakage_time_readings = [60, 60, 60, 60]
 reference_leakage_charge_readings = [-1.00E-14, -1.10E-13, -1.00E-13, 3.00E-14]
@@ -180,47 +246,49 @@ reference_measurement = reference.measure(
 # TODO: Small discrepancy in air kerma uncertainty, compare what excel and python functions do to compute the std.
 # TODO: Why compute 5 intensities and air kerma readings and not compute it from the mean charge? Uncertainties?
 
-# 2.3. VCV of the operational magnitude rate
+# 2.3. CTV of the operational magnitude rate
+# ------------------------------------------
 # - Kerma rate (calculated previously)
 # - Kerma-to-measurement magnitude conversion factor (previously chosen)
 # - Electrometer range correction factor (from reference chamber calibration certificate, RANGE LOW HIGH table)
 # - Air density correction factor (read from Hp tab, air attenuation table)
 
-# WRITE RESULTS TO A TEXT FILE
-with open(output_file, 'w') as f:
-    f.write(f'IR-14D: Calibration of radiation measuring devices\n')
-    f.write(f'\n')
-    f.write(f'1. INITIAL INFORMATION\n')
-    f.write(f'\n')
-    f.write(f'Measurement magnitude: {measurement_magnitude}\n')
-    f.write(f'\n')
-    f.write(f'Reference radiation\n')
-    f.write(f'Radiation quality: {radiation_quality}\n')
-    f.write(f'Data file: {conversion_coefficients}\n')
-    f.write(f'\n')
-    f.write(f'Reference chamber\n')
-    f.write(f'Identification: {reference_chamber_id}\n')
-    f.write(f'Data file: {reference_chamber_data}\n')
-    f.write(f'Calibration coefficient: {json_data[reference_chamber_id]["calibration coefficient"][get_radiation_quality_series(radiation_quality)]}\n')
-    f.write(f'Correction factor: {json_data[reference_chamber_id]["correction factor"][radiation_quality]}\n')
-    f.write(f'Electrometer range: {electrometer_range}\n')
-    f.write(f'Electrometer range correction factor: {json_data[reference_chamber_id]["electrometer range"][electrometer_range]}\n')
-    f.write(f'\n')
-    f.write(f'Monitor chamber ID: {monitor_chamber_id}\n')
-    f.write(f'Detector ID: {detector}\n')
-    f.write(f'\n')
-    f.write(f'Distance factor: {0.206378548} (WARNING! Hardcoded value)\n')  # TODO
-    f.write(f'\n')
-    f.write(f'2. SIMULTANEOUS MEASUREMENTS OF REFERENCE CHAMBER AND MONITOR CHAMBER\n')
-    f.write(f'\n')
-    f.write(f'2.1.Measurements of the monitor chamber\n')
-    f.write(f'{monitor_measurement.to_string(index=True)}\n')
-    f.write(f'\n')
-    f.write(f'2.2. Measurements of the reference chamber\n')
-    f.write(f'{reference_measurement.to_string(index=True)}\n')
-    f.write(f'\n')
+mean_pressure = reference_measurement.loc['Mean', 'Pressure (kPa)']
+mean_temperature = reference_measurement.loc['Mean', 'Temperature (ºC)'] + celsius_to_kelvin
+air_density_correction = np.exp(
+    air_attenuation_coefficient * air_width * (mean_pressure / reference_pressure) * (reference_temperature / mean_temperature))
+# TODO: When calculating ambient correction in reference chamber intensity readings, reference temperature is 293.15 K
+#  (20ºC) and reference pressure is 101.325 kPa (1 atm). However, when calculating air density correction, reference
+#  temperature is 273.15 K and reference pressure is 101.25 kPa. The air density correction is 1.00017 in the first case
+#  and 1.00016 in the second case. I am going to use the first reference values, but this differs from the spreed sheet.
+#  Also, I though that the reference laboratory conditions were 25ºC and 1 atm, we are using 20ºC.
 
-print(f'Calibration results written to {output_file}')
+mean_air_kerma_rate = abs(reference_measurement.loc['Mean', 'Air kerma (Gy/s)'])
+ctv_rate = mean_air_kerma_rate * conversion_coefficient * electrometer_range_correction * air_density_correction * hour_to_second
+integration_time = sum(reference_time_readings) / hour_to_second
+ctv_integral = ctv_rate * integration_time
+
+# Results
+# -------
+section2 = (
+    f'2. SIMULTANEOUS MEASUREMENTS OF REFERENCE CHAMBER AND MONITOR CHAMBER\n'
+    f'\n'
+    f'2.1.Measurements of the monitor chamber\n'
+    f'{monitor_measurement.to_string(index=True)}\n'
+    f'\n'
+    f'2.2. Measurements of the reference chamber\n'
+    f'{reference_measurement.to_string(index=True)}\n'
+    f'\n'
+    f'2.3. CTV of the operational magnitude rate\n'
+    f'Mean air kerma rate: {mean_air_kerma_rate}\n'
+    f'Conversion coefficient: {conversion_coefficient}\n'
+    f'Electrometer range correction: {electrometer_range_correction}\n'
+    f'Air density correction: {air_density_correction}\n'
+    f'CTV of the operational magnitude rate: {ctv_rate}\n'
+    f'Integration time: {integration_time}\n'
+    f'CTV of the integral operational magnitude: {ctv_integral}\n'
+    f'\n'
+)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -259,6 +327,13 @@ print(f'Calibration results written to {output_file}')
 # - Measure temperature (2 probes connected to the same thermometer)
 # - Calculate current intensity (excluding leakages and corrected to reference pressure and temperature conditions)
 # 5.3. Calculate distance correction factor
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# 6. Write results to a text file
+with open(output_file, 'w') as f:
+    f.write(section1 + section2)
+print(f'Calibration results written to {output_file}')
 
 # ----------------------------------------------------------------------------------------------------------------------
 
