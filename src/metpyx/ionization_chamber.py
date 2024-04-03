@@ -96,9 +96,10 @@ class IonizationChamber:
         Merges two DataFrames representing measurement data.
     """
 
-    REFERENCE_TEMPERATURE = 293.15  # K
-    REFERENCE_PRESSURE = 101.325  # kPa
+    REFERENCE_TEMPERATURE = 293.15  # 293.15 K, 20ºC
+    REFERENCE_PRESSURE = 101.325  # 101.325 kPa, 1 atm
     CELSIUS_TO_KELVIN = 273.15
+    HOUR_TO_SECOND = 60 * 60
     UNITS_CONVENTION = {'Time': 's', 'Pressure': 'kPa', 'Temperature': 'ºC', 'Charge': 'C', 'Current': 'A',
                         'Air kerma': 'Gy/s'}
 
