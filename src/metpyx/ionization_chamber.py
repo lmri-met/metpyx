@@ -114,8 +114,11 @@ class IonizationChamber:
         return IonizationChamberMeasurement(ionization_chamber_id=self.identification, time_readings=time_readings,
                                             charge_readings=charge_readings, current_readings=current_readings)
 
-    def measure_current(self, time_readings, charge_readings, background=None, temperature_readings=None,
-                        pressure_readings=None):
+    def measure_current(self, time_readings, charge_readings, time_unit, charge_unit, background=None,
+                        temperature_readings=None, pressure_readings=None, current_unit=None, temperature_unit=None,
+                        pressure_unit=None):
+        check_units_compliance(time=time_unit, charge=charge_unit, temperature=temperature_unit, pressure=pressure_unit,
+                               current=current_unit, air_kerma=None)
         if self.open_chamber:
             reference_pressure = REFERENCE_PRESSURE
             reference_temperature = celsius_to_kelvin(REFERENCE_TEMPERATURE)
@@ -132,8 +135,10 @@ class IonizationChamber:
         return IonizationChamberMeasurement(ionization_chamber_id=self.identification, time_readings=time_readings,
                                             charge_readings=charge_readings, current_readings=current_readings)
 
-    def measure_air_kerma_rate(self, current, radiation_quality):
+    def measure_air_kerma_rate(self, current_measurement, radiation_quality):
         if self.calibrated:
+            # Get current readings
+            current_readings = current_measurement.current_readings
             # Get ionization chamber calibration coefficient and correction factor
             radiation_quality_series = get_radiation_quality_series(radiation_quality)
             calibration_coefficient = self.calibration_coefficients[radiation_quality_series]
@@ -141,9 +146,12 @@ class IonizationChamber:
             # Get distance factor
             distance_factor = 0.206378548  # TODO: compute distance factor
             # Compute air kerma readings
-            air_kerma_rate = md.get_kerma_rate(current, calibration_coefficient, calibration_coefficients_correction,
-                                               distance_factor)
-            return air_kerma_rate
+            air_kerma_rate_readings = md.get_kerma_rate(
+                current=current_readings, calibration_coefficient=calibration_coefficient,
+                calibration_coefficients_correction=calibration_coefficients_correction,
+                distance_factor=distance_factor)
+            current_measurement.set_air_kerma_rate(air_kerma_rate_readings)
+            return current_measurement
         else:
             raise Exception("Cannot compute air kerma: the ionization chamber is not calibrated.")
 
@@ -153,14 +161,14 @@ class IonizationChamber:
 
 class IonizationChamberMeasurement:
     def __init__(self, ionization_chamber_id, time_readings, charge_readings, current_readings,
-                 temperature_readings=None, pressure_readings=None, air_kerma_readings=None):
+                 temperature_readings=None, pressure_readings=None, air_kerma_rate_readings=None):
         self.ionization_chamber_id = ionization_chamber_id
         self.time_readings = time_readings
         self.charge_readings = charge_readings
         self.temperature_readings = temperature_readings
         self.pressure_readings = pressure_readings
         self.current_readings = current_readings
-        self.air_kerma_readings = air_kerma_readings
+        self.air_kerma_rate_readings = air_kerma_rate_readings
         self.time = m.series_to_magnitude(self.time_readings, UNITS_CONVENTION['Time'])
         self.charge = m.series_to_magnitude(self.charge_readings, UNITS_CONVENTION['Charge'])
         self.current = m.series_to_magnitude(self.current_readings, UNITS_CONVENTION['Current'])
@@ -172,16 +180,20 @@ class IonizationChamberMeasurement:
             self.pressure = m.series_to_magnitude(self.pressure_readings, UNITS_CONVENTION['Pressure'])
         else:
             self.pressure = None
-        if air_kerma_readings:
-            self.air_kerma = m.series_to_magnitude(self.air_kerma_readings, UNITS_CONVENTION['Air kerma'])
+        if air_kerma_rate_readings:
+            self.air_kerma_rate = m.series_to_magnitude(self.air_kerma_rate_readings, UNITS_CONVENTION['Air kerma'])
         else:
-            self.air_kerma = None
+            self.air_kerma_rate = None
+
+    def set_air_kerma_rate(self, air_kerma_rate_readings):
+        self.air_kerma_rate_readings = air_kerma_rate_readings
+        self.air_kerma_rate = m.series_to_magnitude(self.air_kerma_rate_readings, UNITS_CONVENTION['Air kerma'])
 
     def to_dataframe(self):
         # Get readings, magnitudes, names and units
         readings = [self.time_readings, self.charge_readings, self.temperature_readings, self.pressure_readings,
-                    self.current_readings, self.air_kerma_readings]
-        magnitudes = [self.time, self.charge, self.temperature, self.pressure, self.current, self.air_kerma]
+                    self.current_readings, self.air_kerma_rate_readings]
+        magnitudes = [self.time, self.charge, self.temperature, self.pressure, self.current, self.air_kerma_rate]
         names = ['Time', 'Charge', 'Temperature', 'Pressure', 'Current', 'Air kerma']
         units = [UNITS_CONVENTION[name] for name in names if name in UNITS_CONVENTION.keys()]
 
