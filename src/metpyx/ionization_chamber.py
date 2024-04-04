@@ -128,17 +128,25 @@ class IonizationChamber:
             self.electrometer_range_correction = None
 
     def measure_current(self, time, charge, background=None, open_detector=False, temperature=None, pressure=None,
-                              reference_temperature=None, reference_pressure=None):
-        current = md.get_current(time, charge)
-        current = md.get_current(time, charge, background=None)
-        current = md.get_current(time, charge, open_detector=True, temperature=None, pressure=None, reference_temperature=None, reference_pressure=None)
-        current = md.get_current(time, charge, background=None, open_detector=False, temperature=None, pressure=None, reference_temperature=None, reference_pressure=None)
-        if background:
-            pass
-        if open_detector:
-            pass
-
-        pass
+                        reference_temperature=None, reference_pressure=None):
+        if background and open_detector:
+            current = md.get_current(time, charge, background=background, open_detector=True, temperature=temperature,
+                                     pressure=pressure, reference_temperature=reference_temperature,
+                                     reference_pressure=reference_pressure)
+        elif not background and open_detector:
+            current = md.get_current(time, charge, open_detector=True, temperature=temperature, pressure=pressure,
+                                     reference_temperature=reference_temperature, reference_pressure=reference_pressure)
+        elif background and not open_detector:
+            current = md.get_current(time, charge, background=background)
+        else:
+            current = md.get_current(time, charge)
+        return current
 
     def measure_kerma(self):
+        if self.calibrated:
+            pass
+        else:
+            raise Exception("Cannot compute air kerma: the ionization chamber is not calibrated.")
+
+    def get_ctv_operational_magnitude(self):
         pass
