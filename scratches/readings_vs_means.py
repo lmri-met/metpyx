@@ -5,8 +5,8 @@ pm = chr(177)
 # Reference chamber measurements: leakage current measurements
 
 # Readings
-leakage_time_readings = np.array([60, 60, 60, 60])
-leakage_charge_readings = np.array([-1.00E-14, -1.10E-13, -1.00E-13, 3.00E-14])
+leakage_time_readings = np.array([60, 60, 60, 60, 60])
+leakage_charge_readings = np.array([-1.00E-14, -1.10E-13, -1.00E-13, 3.00E-14, 0])
 
 # Compute leakage current from leakage current readings
 leakage_current_readings = leakage_charge_readings / leakage_time_readings
