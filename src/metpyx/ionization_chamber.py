@@ -19,6 +19,9 @@ Notes
 -----
 This module is part of the `metpyx` package, designed to facilitate meteorological data analysis.
 """
+import numpy as np
+import pandas as pd
+
 import src.metpyx.magnitude as m
 import src.metpyx.magnitude_definitions as md
 
@@ -144,7 +147,7 @@ class IonizationChamber:
         else:
             raise Exception("Cannot compute air kerma: the ionization chamber is not calibrated.")
 
-    def get_ctv_operational_magnitude(self):
+    def measure_operational_magnitude(self):
         pass
 
 
@@ -173,3 +176,29 @@ class IonizationChamberMeasurement:
             self.air_kerma = m.series_to_magnitude(self.air_kerma_readings, UNITS_CONVENTION['Air kerma'])
         else:
             self.air_kerma = None
+
+    def to_dataframe(self):
+        # Get readings, magnitudes, names and units
+        readings = [self.time_readings, self.charge_readings, self.temperature_readings, self.pressure_readings,
+                    self.current_readings, self.air_kerma_readings]
+        magnitudes = [self.time, self.charge, self.temperature, self.pressure, self.current, self.air_kerma]
+        names = ['Time', 'Pressure', 'Temperature', 'Charge', 'Current', 'Air kerma']
+        units = [UNITS_CONVENTION[name] for name in names if name in UNITS_CONVENTION.keys()]
+
+        # Build dictionary for dataframe building
+        measurement_dict = {}
+        for name, unit, readings, magnitude in zip(names, units, readings, magnitudes):
+            if readings is not None:
+                key = f'{name} ({unit})'
+                value = [*readings, magnitude.value, magnitude.uncertainty, magnitude.percentage_uncertainty()]
+                measurement_dict[key] = value
+
+        # Build dataframe
+        df = pd.DataFrame(measurement_dict)
+
+        # Define and insert first column of the dataframe and set it as index
+        first_column = [f'Reading {i + 1}' for i in range(len(df) - 3)] + ['Mean', 'Uncertainty', '% Uncertainty']
+        df.insert(loc=0, column='#', value=np.array(first_column))
+        df.set_index(keys='#', inplace=True)
+
+        return df
