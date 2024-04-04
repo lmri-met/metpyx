@@ -98,9 +98,9 @@ from src.metpyx.ionization_chamber import IonizationChamber, get_radiation_quali
 # User provided information
 measurement_magnitude = 'H*(10)'
 radiation_quality = 'L-170'
-conversion_coefficients = './assets/radiation_quality_data.csv'
+conversion_coefficients = '../assets/radiation_quality_data.csv'
 reference_chamber_id = 'ns557'
-reference_chamber_data = './assets/standard_chambers.json'
+reference_chamber_data = '../assets/standard_chambers.json'
 electrometer_range = 'low'
 monitor_chamber_id = 'monitor'
 detector = None
@@ -245,6 +245,7 @@ reference_measurement = reference.measure(
 
 # TODO: Small discrepancy in air kerma uncertainty, compare what excel and python functions do to compute the std.
 # TODO: Why compute 5 intensities and air kerma readings and not compute it from the mean charge? Uncertainties?
+# TODO: If reference and monitor chambers are open, why the environmental correction is not taken in account when measuring leakage current?
 
 # 2.3. CTV of the operational magnitude rate
 # ------------------------------------------
