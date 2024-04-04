@@ -182,7 +182,7 @@ class IonizationChamberMeasurement:
         readings = [self.time_readings, self.charge_readings, self.temperature_readings, self.pressure_readings,
                     self.current_readings, self.air_kerma_readings]
         magnitudes = [self.time, self.charge, self.temperature, self.pressure, self.current, self.air_kerma]
-        names = ['Time', 'Pressure', 'Temperature', 'Charge', 'Current', 'Air kerma']
+        names = ['Time', 'Charge', 'Temperature', 'Pressure', 'Current', 'Air kerma']
         units = [UNITS_CONVENTION[name] for name in names if name in UNITS_CONVENTION.keys()]
 
         # Build dictionary for dataframe building

@@ -2,7 +2,7 @@ import json
 
 import numpy as np
 
-from src.metpyx.ionization_chamber import IonizationChamber
+from src.metpyx.ionization_chamber import IonizationChamber, REFERENCE_PRESSURE, REFERENCE_TEMPERATURE
 
 # STEP 1: Simultaneous measurements of the reference chamber and the monitoring chamber
 
@@ -45,3 +45,61 @@ reference_leakage_measurement = reference.measure_leakage_current(
 df_monitor_leakage_measurement = monitor_leakage_measurement.to_dataframe()
 df_reference_leakage_measurement = reference_leakage_measurement.to_dataframe()
 
+# FINAL STEP: Results report
+# -------
+output_file = './output.txt'
+results = (
+    f'IR-14D: Calibration of radiation measuring devices\n'
+    f'\n'
+    f'INITIAL INFORMATION\n'
+    f'\n'
+    # f'Reference radiation:\n'
+    # f'Radiation quality series: {radiation_quality_series}\n'
+    # f'Radiation quality: {radiation_quality}\n'
+    # f'Air attenuation coefficient: {air_attenuation_coefficient}\n'
+    # f'Conversion coefficient: {conversion_coefficient}'
+    # f'Data file: {conversion_coefficients}\n'
+    # f'\n'
+    f'Reference chamber:\n'
+    f'Identification: {reference_chamber_id}\n'
+    # f'Calibration coefficient: {calibration_coefficient}\n'
+    # f'Correction factor: {correction_factor}\n'
+    # f'Electrometer range: {electrometer_range}\n'
+    # f'Electrometer range correction: {electrometer_range_correction}\n'
+    f'Data file: {reference_chamber_data}\n'
+    f'\n'
+    f'Environmental conditions:\n'
+    f'Reference temperature: {REFERENCE_TEMPERATURE} ºC\n'
+    f'Reference pressure: {REFERENCE_PRESSURE} kPa\n'
+    f'\n'
+    f'Other information\n'
+    # f'Measurement magnitude: {measurement_magnitude}\n'
+    f'Monitor chamber ID: {monitor_chamber_id}\n'
+    # f'Detector ID: {detector}\n'
+    # f'Distance factor: {0.206378548} (WARNING! Hardcoded value)\n'  # TODO: Hardcoded value
+    # f'Celsius to Kelvin conversion: {celsius_to_kelvin}\n'
+    # f'Hour to seconds conversion: {hour_to_second}\n'
+    f'\n'
+    f'SIMULTANEOUS MEASUREMENTS OF REFERENCE CHAMBER AND MONITOR CHAMBER\n'
+    f'\n'
+    f'Leakage measurements\n'
+    f'\n'
+    f'Measurements of the monitor chamber\n'
+    f'{df_monitor_leakage_measurement.to_string(index=True)}\n'
+    f'\n'
+    f'Measurements of the reference chamber\n'
+    f'{df_reference_leakage_measurement.to_string(index=True)}\n'
+    f'\n'
+    # f'CTV of the operational magnitude rate\n'
+    # f'Mean air kerma rate: {mean_air_kerma_rate}\n'
+    # f'Conversion coefficient: {conversion_coefficient}\n'
+    # f'Electrometer range correction: {electrometer_range_correction}\n'
+    # f'Air density correction: {air_density_correction}\n'
+    # f'CTV of the operational magnitude rate: {ctv_rate}\n'
+    # f'Integration time: {integration_time}\n'
+    # f'CTV of the integral operational magnitude: {ctv_integral}\n'
+    # f'\n'
+)
+with open(output_file, 'w') as f:
+    f.write(results)
+print(f'Calibration results written to {output_file}')
