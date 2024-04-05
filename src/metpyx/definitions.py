@@ -1,3 +1,5 @@
+from math import exp
+
 REFERENCE_TEMPERATURE = 20  # 293.15 K, 20ºC
 REFERENCE_PRESSURE = 101.325  # 101.325 kPa, 1 atm
 UNITS_CONVENTION = {'Time': 's', 'Pressure': 'kPa', 'Temperature': 'ºC', 'Charge': 'C', 'Current': 'A',
@@ -9,9 +11,19 @@ def celsius_to_kelvin(celsius):
     return celsius + 273.15
 
 
+def kelvin_to_celsius(kelvin):
+    # T(K) = T(ºC) + 273.15
+    return 273.15 - kelvin
+
+
 def hour_to_second(hours):
     # 1 h = 3600 s
     return hours * 3600
+
+
+def second_to_hour(seconds):
+    # 1 h = 3600 s
+    return seconds / 3600
 
 
 def check_units_compliance(time=None, charge=None, temperature=None, pressure=None, current=None, air_kerma=None):
@@ -222,3 +234,8 @@ def get_integral_magnitude(magnitude_rate, integration_time):
     5.0
     """
     return magnitude_rate * integration_time
+
+
+def get_attenuation_factor(attenuation_coefficient, width, temperature, pressure, reference_temperature, reference_pressure):
+    correction = get_environmental_correction(temperature, pressure, reference_temperature, reference_pressure)
+    return exp(attenuation_coefficient * width * correction)
