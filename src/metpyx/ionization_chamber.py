@@ -98,18 +98,21 @@ class IonizationChamber:
         if self.open_chamber:
             reference_pressure = d.REFERENCE_PRESSURE
             reference_temperature = d.celsius_to_kelvin(d.REFERENCE_TEMPERATURE)
-            temperature_readings = d.celsius_to_kelvin(temperature_readings)
+            temperature_readings_k = d.celsius_to_kelvin(temperature_readings)
         else:
             reference_pressure = None
             reference_temperature = None
+            temperature_readings_k = None
 
         current_readings = d.get_current(time=time_readings, charge=charge_readings, background=background,
                                          open_detector=self.open_chamber,
-                                         temperature=temperature_readings, pressure=pressure_readings,
+                                         temperature=temperature_readings_k, pressure=pressure_readings,
                                          reference_temperature=reference_temperature,
                                          reference_pressure=reference_pressure)
         return IonizationChamberMeasurement(ionization_chamber_id=self.identification, time_readings=time_readings,
-                                            charge_readings=charge_readings, current_readings=current_readings)
+                                            charge_readings=charge_readings, current_readings=current_readings,
+                                            pressure_readings=pressure_readings,
+                                            temperature_readings=temperature_readings)
 
     def measure_air_kerma_rate(self, current_measurement, radiation_quality):
         if self.calibrated:
@@ -131,35 +134,116 @@ class IonizationChamber:
         else:
             raise Exception("Cannot compute air kerma: the ionization chamber is not calibrated.")
 
-    def measure_operational_magnitude(self):
-        pass
+    def measure_operational_magnitude(self, kerma_measurement, radiation_quality_csv, measurement_magnitude, radiation_quality, electrometer_range):
+        if self.calibrated:
+            # Get kerma rate from ionization chamber measurement
+            mean_air_kerma_rate = abs(kerma_measurement.air_kerma_rate.value)
+
+            # Read radiation quality data file
+            csv_data = pd.read_csv(radiation_quality_csv, header=1)
+            # Get kerma-to-measurement magnitude conversion factor from CSV
+            conversion_coefficient = csv_data.loc[csv_data['Quality'] == radiation_quality, f'h_k[{measurement_magnitude}]'].values[0]
+
+            # Get electrometer range correction factor from ionization chamber
+            electrometer_range_correction = self.electrometer_range_correction[electrometer_range]
+
+            # Get air attenuation factor from CSV data
+            air_attenuation_coefficient = csv_data.loc[csv_data['Quality'] == radiation_quality, 'mu_air'].values[0]
+            # Define air width
+            air_width = 0.001293
+            # Get pressure from ionization chamber measurement
+            mean_pressure = kerma_measurement.pressure.value
+            # Get temperature from ionization chamber measurement in celsius
+            mean_temperature = kerma_measurement.temperature.value
+            # Get temperature from ionization chamber measurement in kelvin
+            mean_temperature_k = d.celsius_to_kelvin(kerma_measurement.temperature.value)
+            # Change reference temperature units to kelvin
+            reference_temperature_k = d.celsius_to_kelvin(d.REFERENCE_TEMPERATURE)
+            # Compute air density correction factor
+            air_density_correction = d.get_attenuation_factor(
+                attenuation_coefficient=air_attenuation_coefficient, width=air_width, temperature=mean_temperature_k,
+                pressure=mean_pressure, reference_temperature=reference_temperature_k,
+                reference_pressure=d.REFERENCE_PRESSURE)
+
+            # Compute operational magnitude rate (per second)
+            ctv_rate = d.get_operational_magnitude_rate(
+                kerma_rate=mean_air_kerma_rate, conversion_coefficient=conversion_coefficient,
+                electrometer_range_correction=electrometer_range_correction, air_density_correction=air_density_correction)
+            # Compute operational magnitude rate (per hour)
+            ctv_rate = d.second_to_hour(ctv_rate)
+
+            # Compute integration time
+            integration_time = sum(kerma_measurement.time_readings)
+            # Compute integral operational magnitude
+            ctv_integral = d.get_integral_magnitude(magnitude_rate=ctv_rate, integration_time=d.second_to_hour(integration_time))
+
+            results = (
+                f'Mean kerma rate: {mean_air_kerma_rate}\n\n'
+                f'Measurement magnitude: {measurement_magnitude}\n'
+                f'Data file: {radiation_quality_csv}\n'
+                f'Conversion coefficient: {conversion_coefficient}\n\n'
+                f'Electrometer range: {electrometer_range}\n'
+                f'Electrometer range correction: {electrometer_range_correction}\n\n'
+                f'Air attenuation coefficient correction: {air_attenuation_coefficient}\n'
+                f'Air width: {air_width}\n'
+                f'Mean pressure: {mean_pressure}\n'
+                f'Mean temperature: {mean_temperature}\n'
+                f'Air density correction: {air_density_correction}\n\n'
+                f'CTV of the operational magnitude rate: {ctv_rate}\n'
+                f'Integration time: {integration_time}\n'
+                f'CTV of the integral operational magnitude: {ctv_integral}\n'
+            )
+            return results
+        else:
+            raise Exception("Cannot compute operational magnitude: the ionization chamber is not calibrated.")
 
 
 class IonizationChamberMeasurement:
-    def __init__(self, ionization_chamber_id, time_readings, charge_readings, current_readings,
-                 temperature_readings=None, pressure_readings=None, air_kerma_rate_readings=None):
-        self.ionization_chamber_id = ionization_chamber_id
-        self.time_readings = time_readings
-        self.charge_readings = charge_readings
-        self.temperature_readings = temperature_readings
-        self.pressure_readings = pressure_readings
-        self.current_readings = current_readings
-        self.air_kerma_rate_readings = air_kerma_rate_readings
-        self.time = m.series_to_magnitude(self.time_readings, d.UNITS_CONVENTION['Time'])
-        self.charge = m.series_to_magnitude(self.charge_readings, d.UNITS_CONVENTION['Charge'])
-        self.current = m.series_to_magnitude(self.current_readings, d.UNITS_CONVENTION['Current'])
-        if temperature_readings:
-            self.temperature = m.series_to_magnitude(self.temperature_readings, d.UNITS_CONVENTION['Temperature'])
+    def __init__(self, magnitude, ionization_chamber_id, ionization_chamber_json, time_readings, charge_readings,
+                 current_readings, temperature_readings=None, pressure_readings=None, radiation_quality=None,
+                 distance_factor=None, radiation_quality_csv=None, air_kerma_rate_readings=None, electrometer_range=None,
+                 operational_magnitude=None, air_width=None, air_density_correction=None,
+                 operational_magnitude_rate=None, integration_time=None, integral_operational_magnitude=None):
+        if magnitude == 'leakage current':
+            self.ionization_chamber_id = ionization_chamber_id
+            self.ionization_chamber_json = ionization_chamber_json
+            self.time_readings = time_readings
+            self.charge_readings = charge_readings
+            self.current_readings = current_readings
+            self.time = m.series_to_magnitude(time_readings, d.UNITS_CONVENTION['Time'])
+            self.charge = m.series_to_magnitude(charge_readings, d.UNITS_CONVENTION['Charge'])
+            self.current = m.series_to_magnitude(current_readings, d.UNITS_CONVENTION['Current'])
+        if magnitude == 'current' or magnitude == 'air kerma rate' or magnitude == 'operational magnitude':
+            self.reference_temperature = d.REFERENCE_TEMPERATURE
+            self.reference_pressure = d.REFERENCE_PRESSURE
+            self.temperature_readings = temperature_readings
+            self.pressure_readings = pressure_readings
+            self.temperature = m.series_to_magnitude(temperature_readings, d.UNITS_CONVENTION['Temperature'])
+            self.pressure = m.series_to_magnitude(pressure_readings, d.UNITS_CONVENTION['Pressure'])
+        if magnitude == 'air kerma rate' or magnitude == 'operational magnitude':
+            self.radiation_quality = radiation_quality
+            self.calibration_coefficient = ionization_chamber_json[ionization_chamber_id]['calibration coefficient'][get_radiation_quality_series(radiation_quality)]
+            self.calibration_coefficient_correction = ionization_chamber_json[ionization_chamber_id]['correction factor'][radiation_quality]
+            self.distance_factor = distance_factor
+            self.radiation_quality_csv = radiation_quality_csv
+            self.air_kerma_rate_readings = air_kerma_rate_readings
+            self.air_kerma_rate = m.series_to_magnitude(air_kerma_rate_readings, d.UNITS_CONVENTION['Air kerma'])
+        if magnitude == 'operational magnitude':
+            self.operational_magnitude = operational_magnitude
+            self.conversion_coefficient = radiation_quality_csv.loc[radiation_quality_csv['Quality'] == radiation_quality, f'h_k[{operational_magnitude}]'].values[0]
+            self.electrometer_range = electrometer_range
+            self.electrometer_range_correction = ionization_chamber_json[ionization_chamber_id]['electrometer range'][electrometer_range]
+            self.air_attenuation_coefficient = radiation_quality_csv.loc[radiation_quality_csv['Quality'] == radiation_quality, 'mu_air'].values[0]
+            self.air_width = air_width
+            self.air_density_correction = air_density_correction
+            self.operational_magnitude_rate = operational_magnitude_rate
+            self.integration_time = integration_time
+            self.integral_operational_magnitude = integral_operational_magnitude
         else:
-            self.temperature = None
-        if pressure_readings:
-            self.pressure = m.series_to_magnitude(self.pressure_readings, d.UNITS_CONVENTION['Pressure'])
-        else:
-            self.pressure = None
-        if air_kerma_rate_readings:
-            self.air_kerma_rate = m.series_to_magnitude(self.air_kerma_rate_readings, d.UNITS_CONVENTION['Air kerma'])
-        else:
-            self.air_kerma_rate = None
+            raise Exception("Available measurement magnitudes are: leakage current, current, air kerma rate and operational magnitude")
+
+    def __repr__(self):
+        return f'{self.to_dataframe().to_string()}'
 
     def set_air_kerma_rate(self, air_kerma_rate_readings):
         self.air_kerma_rate_readings = air_kerma_rate_readings
