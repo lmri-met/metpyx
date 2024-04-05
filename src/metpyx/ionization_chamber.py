@@ -22,33 +22,8 @@ This module is part of the `metpyx` package, designed to facilitate meteorologic
 import numpy as np
 import pandas as pd
 
+import src.metpyx.definitions as d
 import src.metpyx.magnitude as m
-import src.metpyx.magnitude_definitions as md
-
-REFERENCE_TEMPERATURE = 20  # 293.15 K, 20ºC
-REFERENCE_PRESSURE = 101.325  # 101.325 kPa, 1 atm
-UNITS_CONVENTION = {'Time': 's', 'Pressure': 'kPa', 'Temperature': 'ºC', 'Charge': 'C', 'Current': 'A',
-                    'Air kerma': 'Gy/s'}
-
-
-def celsius_to_kelvin(celsius):
-    # T(K) = T(ºC) + 273.15
-    return celsius + 273.15
-
-
-def hour_to_second(hours):
-    # 1 h = 3600 s
-    return hours * 3600
-
-
-def check_units_compliance(time=None, charge=None, temperature=None, pressure=None, current=None, air_kerma=None):
-    keys = ['Time', 'Charge', 'Temperature', 'Pressure', 'Current', 'Air kerma']
-    values = [time, charge, temperature, pressure, current, air_kerma]
-    units_dictionary = dict(zip(keys, values))
-    for key in units_dictionary:
-        if units_dictionary[key] is not None and units_dictionary[key] != UNITS_CONVENTION[key]:
-            message = f'Unit of {key} must be {UNITS_CONVENTION[key]}, provided unit is {units_dictionary[key]}'
-            raise ValueError(message)
 
 
 def get_radiation_quality_series(radiation_quality):
@@ -109,29 +84,30 @@ class IonizationChamber:
             self.electrometer_range_correction = None
 
     def measure_leakage_current(self, time_readings, charge_readings, time_unit, charge_unit):
-        check_units_compliance(time=time_unit, charge=charge_unit)
-        current_readings = md.get_current(time=time_readings, charge=charge_readings)
+        d.check_units_compliance(time=time_unit, charge=charge_unit)
+        current_readings = d.get_current(time=time_readings, charge=charge_readings)
         return IonizationChamberMeasurement(ionization_chamber_id=self.identification, time_readings=time_readings,
                                             charge_readings=charge_readings, current_readings=current_readings)
 
     def measure_current(self, time_readings, charge_readings, time_unit, charge_unit, background=None,
                         temperature_readings=None, pressure_readings=None, current_unit=None, temperature_unit=None,
                         pressure_unit=None):
-        check_units_compliance(time=time_unit, charge=charge_unit, temperature=temperature_unit, pressure=pressure_unit,
-                               current=current_unit, air_kerma=None)
+        d.check_units_compliance(time=time_unit, charge=charge_unit, temperature=temperature_unit,
+                                 pressure=pressure_unit,
+                                 current=current_unit, air_kerma=None)
         if self.open_chamber:
-            reference_pressure = REFERENCE_PRESSURE
-            reference_temperature = celsius_to_kelvin(REFERENCE_TEMPERATURE)
-            temperature_readings = celsius_to_kelvin(temperature_readings)
+            reference_pressure = d.REFERENCE_PRESSURE
+            reference_temperature = d.celsius_to_kelvin(d.REFERENCE_TEMPERATURE)
+            temperature_readings = d.celsius_to_kelvin(temperature_readings)
         else:
             reference_pressure = None
             reference_temperature = None
 
-        current_readings = md.get_current(time=time_readings, charge=charge_readings, background=background,
-                                          open_detector=self.open_chamber,
-                                          temperature=temperature_readings, pressure=pressure_readings,
-                                          reference_temperature=reference_temperature,
-                                          reference_pressure=reference_pressure)
+        current_readings = d.get_current(time=time_readings, charge=charge_readings, background=background,
+                                         open_detector=self.open_chamber,
+                                         temperature=temperature_readings, pressure=pressure_readings,
+                                         reference_temperature=reference_temperature,
+                                         reference_pressure=reference_pressure)
         return IonizationChamberMeasurement(ionization_chamber_id=self.identification, time_readings=time_readings,
                                             charge_readings=charge_readings, current_readings=current_readings)
 
@@ -146,7 +122,7 @@ class IonizationChamber:
             # Get distance factor
             distance_factor = 0.206378548  # TODO: compute distance factor
             # Compute air kerma readings
-            air_kerma_rate_readings = md.get_kerma_rate(
+            air_kerma_rate_readings = d.get_kerma_rate(
                 current=current_readings, calibration_coefficient=calibration_coefficient,
                 calibration_coefficients_correction=calibration_coefficients_correction,
                 distance_factor=distance_factor)
@@ -169,25 +145,25 @@ class IonizationChamberMeasurement:
         self.pressure_readings = pressure_readings
         self.current_readings = current_readings
         self.air_kerma_rate_readings = air_kerma_rate_readings
-        self.time = m.series_to_magnitude(self.time_readings, UNITS_CONVENTION['Time'])
-        self.charge = m.series_to_magnitude(self.charge_readings, UNITS_CONVENTION['Charge'])
-        self.current = m.series_to_magnitude(self.current_readings, UNITS_CONVENTION['Current'])
+        self.time = m.series_to_magnitude(self.time_readings, d.UNITS_CONVENTION['Time'])
+        self.charge = m.series_to_magnitude(self.charge_readings, d.UNITS_CONVENTION['Charge'])
+        self.current = m.series_to_magnitude(self.current_readings, d.UNITS_CONVENTION['Current'])
         if temperature_readings:
-            self.temperature = m.series_to_magnitude(self.temperature_readings, UNITS_CONVENTION['Temperature'])
+            self.temperature = m.series_to_magnitude(self.temperature_readings, d.UNITS_CONVENTION['Temperature'])
         else:
             self.temperature = None
         if pressure_readings:
-            self.pressure = m.series_to_magnitude(self.pressure_readings, UNITS_CONVENTION['Pressure'])
+            self.pressure = m.series_to_magnitude(self.pressure_readings, d.UNITS_CONVENTION['Pressure'])
         else:
             self.pressure = None
         if air_kerma_rate_readings:
-            self.air_kerma_rate = m.series_to_magnitude(self.air_kerma_rate_readings, UNITS_CONVENTION['Air kerma'])
+            self.air_kerma_rate = m.series_to_magnitude(self.air_kerma_rate_readings, d.UNITS_CONVENTION['Air kerma'])
         else:
             self.air_kerma_rate = None
 
     def set_air_kerma_rate(self, air_kerma_rate_readings):
         self.air_kerma_rate_readings = air_kerma_rate_readings
-        self.air_kerma_rate = m.series_to_magnitude(self.air_kerma_rate_readings, UNITS_CONVENTION['Air kerma'])
+        self.air_kerma_rate = m.series_to_magnitude(self.air_kerma_rate_readings, d.UNITS_CONVENTION['Air kerma'])
 
     def to_dataframe(self):
         # Get readings, magnitudes, names and units
@@ -195,7 +171,7 @@ class IonizationChamberMeasurement:
                     self.current_readings, self.air_kerma_rate_readings]
         magnitudes = [self.time, self.charge, self.temperature, self.pressure, self.current, self.air_kerma_rate]
         names = ['Time', 'Charge', 'Temperature', 'Pressure', 'Current', 'Air kerma']
-        units = [UNITS_CONVENTION[name] for name in names if name in UNITS_CONVENTION.keys()]
+        units = [d.UNITS_CONVENTION[name] for name in names if name in d.UNITS_CONVENTION.keys()]
 
         # Build dictionary for dataframe building
         measurement_dict = {}

@@ -1,3 +1,29 @@
+REFERENCE_TEMPERATURE = 20  # 293.15 K, 20ºC
+REFERENCE_PRESSURE = 101.325  # 101.325 kPa, 1 atm
+UNITS_CONVENTION = {'Time': 's', 'Pressure': 'kPa', 'Temperature': 'ºC', 'Charge': 'C', 'Current': 'A',
+                    'Air kerma': 'Gy/s'}
+
+
+def celsius_to_kelvin(celsius):
+    # T(K) = T(ºC) + 273.15
+    return celsius + 273.15
+
+
+def hour_to_second(hours):
+    # 1 h = 3600 s
+    return hours * 3600
+
+
+def check_units_compliance(time=None, charge=None, temperature=None, pressure=None, current=None, air_kerma=None):
+    keys = ['Time', 'Charge', 'Temperature', 'Pressure', 'Current', 'Air kerma']
+    values = [time, charge, temperature, pressure, current, air_kerma]
+    units_dictionary = dict(zip(keys, values))
+    for key in units_dictionary:
+        if units_dictionary[key] is not None and units_dictionary[key] != UNITS_CONVENTION[key]:
+            message = f'Unit of {key} must be {UNITS_CONVENTION[key]}, provided unit is {units_dictionary[key]}'
+            raise ValueError(message)
+
+
 def get_environmental_correction(temperature, pressure, reference_temperature, reference_pressure):
     """
     Calculate the environmental correction factor.
