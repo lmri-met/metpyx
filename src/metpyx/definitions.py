@@ -72,8 +72,8 @@ def get_environmental_correction(temperature, pressure, reference_temperature, r
     return (reference_pressure / reference_temperature) * (temperature / pressure)
 
 
-def get_current(time, charge, background=None, open_detector=False, temperature=None, pressure=None,
-                reference_temperature=None, reference_pressure=None):
+def get_current(time, charge, background=False, background_current=None, open_detector=False, temperature=None,
+                pressure=None, reference_temperature=None, reference_pressure=None):
     """
     Calculate the current.
 
@@ -117,12 +117,17 @@ def get_current(time, charge, background=None, open_detector=False, temperature=
     >>> get_current(10, 5, open_detector=True, temperature=300, pressure=101325, reference_temperature=298.15, reference_pressure=101325)
     1.0000494031588694
     """
-    current = charge / time
-    if background:
-        current = current - background
     if open_detector:
         correction = get_environmental_correction(temperature, pressure, reference_temperature, reference_pressure)
-        current = current * correction
+        if background:
+            current = charge / time * correction - background_current
+        else:
+            current = charge / time * correction
+    else:
+        if background is not None:
+            current = charge / time - background_current
+        else:
+            current = charge / time
     return current
 
 
