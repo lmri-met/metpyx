@@ -521,11 +521,20 @@ class ir14dGUI(tk.Tk):
 
 
 
-
+##### START CALCULO FACTOR DE CORRECCIÓN POR DISTANCIA
 
     def on_fcdist_change(self, event):
         if self.combo_fcdist_ref.get() == "Sí":
             self.setup_initial_measurement_interface()
+        elif self.combo_fcdist_ref.get() == "No":
+            # Configura fcd_var a 1 y lo hace solo lectura
+            self.fcd_var.config(state='normal')  # Cambia el estado a normal para permitir la edición
+            self.fcd_var.delete(0, 'end')  # Elimina el contenido actual
+            self.fcd_var.insert(0, "1.00")  # Inserta el valor '1.00'
+            self.fcd_var.config(state='readonly')  # Vuelve a ponerlo como solo lectura
+            
+            # Llama al método calibration_mode
+            self.calibration_mode()
 
     def setup_initial_measurement_interface(self):
         self.frame3 = tk.Frame(self.frame_row1, borderwidth=2, relief="solid", bg='white')
@@ -551,7 +560,7 @@ class ir14dGUI(tk.Tk):
             self.start_button.grid(row=3, column=0, columnspan=4)
 
     def create_measurement_table(self, start_row):
-        headers = ["Presión (hPa)", "Temperatura (°C)", "Temp. monitor (°C)", "Carga Principal (nC)", "Carga Monitor (nC)", "Int. Ppal (A)", "Int. Monitor (A)"]
+        headers = ["Presión (hPa)", "Temperatura (°C)", "Temp. monitor (°C)", "Carga Principal (nC)", "Carga Monitor (nC)", "Int. Equipo (A)", "Int. Monitor (A)"]
         for i, header in enumerate(headers):
             label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=15)
             label.grid(row=start_row + 1, column=i, sticky='ew')  # Offset by 1 to make space for the description text
@@ -570,16 +579,19 @@ class ir14dGUI(tk.Tk):
             start_row = 4 + tanda * (5 + 5)  # 5 filas de medidas, 1 fila de promedio, 1 fila de desviación, 1 fila de decisiones y 1 fila adicional para separación
 
         description_texts = ["Medida de fugas", "Medidas a distancia lejana (m)", "Medidas a distancia cercana (m)"]
-        description_label = tk.Label(self.frame3, text=description_texts[tanda], font=('Arial', 12))
-        description_label.grid(row=start_row, column=0, columnspan=2)
+        description_label = tk.Label(self.frame3, text=description_texts[tanda],
+                                    bg='black', fg='white', 
+                                    font=('Helvetica', 14, 'bold'))
+        description_label.grid(row=start_row, column=0, columnspan=7, sticky='wens')  # Ajustado para ocupar 6 columnas
+
 
         # Introducción para "Medidas a distancia lejana"
         if tanda == 1:
-            distant_entry = tk.Entry(self.frame3, font=('Arial', 8), width=5)
-            distant_entry.grid(row=start_row, column=2)
+            distant_entry = tk.Entry(self.frame3, font=('Arial', 8), width=10)
+            distant_entry.grid(row=start_row, column=5)
         elif tanda == 2:
-            close_entry = tk.Entry(self.frame3, font=('Arial', 8), width=5)
-            close_entry.grid(row=start_row, column=2)
+            close_entry = tk.Entry(self.frame3, font=('Arial', 8), width=10)
+            close_entry.grid(row=start_row, column=5)
 
         labels = self.create_measurement_table(start_row)
         if len(self.data_labels) <= tanda:
@@ -613,37 +625,69 @@ class ir14dGUI(tk.Tk):
             for col_index, value in enumerate(row):
                 self.data_labels[tanda][row_index][col_index].config(text=f"{value:.2f}")
 
-        # Calcular y mostrar promedio y desviación estándar para cada columna
+        # Calculate and display average and standard deviation for each column
         for col_index, column_name in enumerate(df.columns):
             avg_value = np.mean(df[column_name])
             std_value = np.std(df[column_name])
+            if tanda == 1 or tanda == 2:
+                if column_name == "Int. Equipo (A)":
+                    setattr(self, f"avg_int_equipo_tanda_{tanda}", avg_value)
+                if column_name == "Int. Monitor (A)":
+                    setattr(self, f"avg_int_monitor_tanda_{tanda}", avg_value)
             avg_label = tk.Label(self.frame3, text=f"Prom: {avg_value:.2f}", font=('Arial', 8), bg='lightyellow')
-            avg_label.grid(row=start_row + num_medidas + 2, column=col_index, sticky='ew')  # Mostrar debajo de los últimos datos
+            avg_label.grid(row=start_row + num_medidas + 2, column=col_index, sticky='ew')
 
             std_label = tk.Label(self.frame3, text=f"Desv: {std_value:.2f}", font=('Arial', 8), bg='lightyellow')
-            std_label.grid(row=start_row + num_medidas + 3, column=col_index, sticky='ew')  # Mostrar debajo del promedio
+            std_label.grid(row=start_row + num_medidas + 3, column=col_index, sticky='ew')
 
-        decision_row = start_row + num_medidas + 4  # Ajustar para seguir a las etiquetas de promedio/desviación
+##### XANDRA START: Revisa este cálculo del FCD
+        if tanda == 2:  # Print the averages after the third tanda
+            print(f"Average Int. Equipo (A) in Tanda 2: {self.avg_int_equipo_tanda_1:.2f}")
+            print(f"Average Int. Monitor (A) in Tanda 2: {self.avg_int_monitor_tanda_1:.2f}")
+            print(f"Average Int. Equipo (A) in Tanda 3: {self.avg_int_equipo_tanda_2:.2f}")
+            print(f"Average Int. Monitor (A) in Tanda 3: {self.avg_int_monitor_tanda_2:.2f}")
+            # Calculate FCD value
+            fcd_value = (self.avg_int_equipo_tanda_1 * self.avg_int_monitor_tanda_2) / \
+                        (self.avg_int_equipo_tanda_2 * self.avg_int_monitor_tanda_1)
+            self.fcd_var = tk.Entry(self.frame2, width=12, state='readonly')  # Inicializa el Entry en modo solo lectura
+            self.fcd_var.insert(0, f"{fcd_value:.2f}")  # Inserta el valor formateado a dos decimales
+            self.fcd_var.grid(row=11, column=3, sticky="w", padx=5, pady=5)  # Ubica el Entry en la interfaz
+##### XANDRA END:
+
+        decision_row = start_row + num_medidas + 4
         self.setup_next_tanda(decision_row, tanda)
-
 
     def setup_next_tanda(self, decision_row, tanda):
         options_label = tk.Label(self.frame3, text="Opciones posibles:", bg='#FFB233', font=('Arial', 10))
         options_label.grid(row=decision_row, column=0, sticky='w', padx=5)
-        decision_combo = ttk.Combobox(self.frame3, values=["Reiniciar medidas", "Continuar con las medidas"], width=30)
+        
+        # Adjusting options for tanda 2
+        if tanda == 2:
+            options = ["Reiniciar medidas", "Calculo del FCD y continuar"]
+        else:
+            options = ["Reiniciar medidas", "Continuar con las medidas"]
+
+        decision_combo = ttk.Combobox(self.frame3, values=options, width=30)
         decision_combo.grid(row=decision_row, column=1, columnspan=2, sticky='w')
         decision_combo.bind("<<ComboboxSelected>>", lambda e: self.on_decision_made(e, tanda))
 
     def on_decision_made(self, event, tanda):
         choice = event.widget.get()
         if choice == "Reiniciar medidas":
-            for label in self.data_labels[tanda]:
-                for lbl in label:
-                    lbl.config(text="")
-            self.perform_measurements(tanda)  # Reiniciar las mediciones para la tanda actual
+            # Clear all labels for the current tanda
+            for label_row in self.data_labels[tanda]:
+                for label in label_row:
+                    label.config(text="")
+            self.perform_measurements(tanda)  # Restart measurements for the current tanda
         elif choice == "Continuar con las medidas":
-            self.perform_measurements(tanda + 1)  # Continuar con la siguiente tanda
+            self.perform_measurements(tanda + 1)  # Proceed to the next tanda
+        elif choice == "Calculo del FCD y continuar" and tanda == 2:
+            # Clear frame3 contents
+            for widget in self.frame3.winfo_children():
+                widget.destroy()
+            self.calibration_mode()
 
+##### XANDRA_START: Estos cálculos de INTENSIDAD me los he inventado. Poner la clase verdadera
     def calculate_int_ppal(self, row):
         pressure = row["Presión (hPa)"]
         temperature = row["Temp. equipo (°C)"]
@@ -655,11 +699,12 @@ class ir14dGUI(tk.Tk):
         temperature = row["Temp. monitor (°C)"]
         charge_monitor = row["Carga monitor (nC)"]
         return (pressure * temperature * charge_monitor) / 1000  # Convertido a Amperios
+##### XANDRA_END: Cuidado con el formato decimal.
 
     def run(self):
         self.mainloop()
 
-     
+##### FIN CALCULO DEL FACTOR DE CORRECCION POR DISTANCIA    
 
 
     def update_labels(self, event):
@@ -834,7 +879,13 @@ class ir14dGUI(tk.Tk):
             self.new_start_button = tk.Button(self.frame3, text="Iniciar Nueva Tanda", bg='blue', fg='white', command=self.new_continue_measurements)
             self.new_start_button.grid(row=last_row_start + 1, column=0, columnspan=3)  # Mostrar botón para nuevas medidas
 
-    
+
+
+    def calibration_mode(self):
+        calibration_label = tk.Label(self.frame3, text="CALIBRACIÓN DEL EQUIPO", bg='white', fg='black', font=('Helvetica', 14, 'bold'))
+        calibration_label.grid(row=0, column=0, columnspan=4, sticky='w', padx=5, pady=5)
+        
+   
 
 def main():
     root = tk.Tk()
