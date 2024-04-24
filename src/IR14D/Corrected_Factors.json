@@ -1,0 +1,50 @@
+{
+    "L-10 1 m": {
+        "Equivalente de dosis direccional H´(0,07)": "0,908",
+        "Equivalente de dosis direccional H´(3)": "0,137",
+        "Equivalente de dosis ambiental H*(10)": "*",
+        "Exposici\u00f3n": "114,1",
+        "Kerma en aire": "1",
+        "Dosis absorbida en aire": "1"
+    },
+    "L-10 2,5 m": {
+        "Equivalente de dosis direccional H´(0,07)": "0,915",
+        "Equivalente de dosis direccional H´(3)": "0,154",
+        "Equivalente de dosis ambiental H*(10)": "*",
+        "Exposici\u00f3n": "114,1",
+        "Kerma en aire": "1",
+        "Dosis absorbida en aire": "1"
+    },
+    "L-20 1 m": {
+        "Equivalente de dosis direccional H´(0,07)": "1,01",
+        "Equivalente de dosis direccional H´(3)": "0,773",
+        "Equivalente de dosis ambiental H*(10)": "0,393",
+        "Exposici\u00f3n": "114,1",
+        "Kerma en aire": "1",
+        "Dosis absorbida en aire": "1"
+    },
+    "L-20 2,5 m": {
+        "Equivalente de dosis direccional H´(0,07)": "1,01",
+        "Equivalente de dosis direccional H´(3)": "0,773",
+        "Equivalente de dosis ambiental H*(10)": "0,396",
+        "Exposici\u00f3n": "114,1",
+        "Kerma en aire": "1",
+        "Dosis absorbida en aire": "1"
+    },
+    "N-10 1 m": {
+        "Equivalente de dosis direccional H´(0,07)": "0,885",
+        "Equivalente de dosis direccional H´(3)": "0,0956",
+        "Equivalente de dosis ambiental H*(10)": "*",
+        "Exposici\u00f3n": "114,1",
+        "Kerma en aire": "1",
+        "Dosis absorbida en aire": "1"
+    },
+    "N-10 2,5 m": {
+        "Equivalente de dosis direccional H´(0,07)": "0,902",
+        "Equivalente de dosis direccional H´(3)": "0,126",
+        "Equivalente de dosis ambiental H*(10)": "*",
+        "Exposici\u00f3n": "114,1",
+        "Kerma en aire": "1",
+        "Dosis absorbida en aire": "1"
+    }
+}
