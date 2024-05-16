@@ -2,10 +2,16 @@ import tkinter as tk
 from tkinter import ttk
 import tkinter.ttk as ttk
 from tkinter import Label
+from tkinter import Toplevel
 from tkcalendar import DateEntry
 import tkinter.font as tkFont
+import os
 import pandas as pd
+from tkinter import messagebox
 import openpyxl
+from openpyxl.utils import get_column_letter
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
 import json
 from tkinter import font  # Importar el módulo de fuente
 import matplotlib.pyplot as plt
@@ -16,7 +22,12 @@ import serial
 import time
 import datetime
 import random
+import cv2
+from PIL import Image, ImageTk
 
+
+def as_text(value):
+    return str(value) if value is not None else ""
 
 class ir14dGUI(tk.Tk):
     # def __init__(self, master):
@@ -24,6 +35,25 @@ class ir14dGUI(tk.Tk):
         super().__init__()
         # self.master = master
         self.title("IR14D - PATRÓN DE RAYOS X")
+        self.dataxls = {}
+        self.datamed = {}
+        self.datafcd = {}
+        self.avg_int_equipo_tanda_1 = None
+        self.avg_int_equipo_tanda_2 = None
+        self.avg_int_monitor_tanda_1 = None
+        self.avg_int_monitor_tanda_2 = None
+
+        custom_font = ("Helvetica", 12)
+        style = ttk.Style()
+        style.theme_use('default')
+        style.configure("TFrame", background="white")
+        style.configure("TLabel", background="white", foreground="black")
+        style.configure("TEntry", fieldbackground="white", background="white")
+        style.configure("TCombobox", fieldbackground="white", background="white")
+        style.configure('Leftalign.TCombobox', justify='left') 
+        style.configure('Rightalign.TCombobox', justify='right')
+        style.theme_use("clam")  # Usa un tema que permita la configuración de colores
+        style.configure("CustomCombobox.TCombobox", fieldbackground="#F8FEE4", background="#F8FEE4", font=custom_font)
 
         # self.correction_factor_str = "0.00"  # Valor inicial
         self.correction_factor_var = tk.StringVar(value="0.0")
@@ -32,16 +62,11 @@ class ir14dGUI(tk.Tk):
         # Font for the title
         self.title_font = tkFont.Font(family="Helvetica", size=16, weight="bold")
 
-        # Frame for the title using grid
-        # self.titulo_frame = tk.Frame(self.master, height=30)
-        self.titulo_frame = tk.Frame(self, height=30)
-        self.titulo_frame.grid(row=0, column=0, sticky="ew", columnspan=2)  # Make it span across all columns in the grid
-        # self.master.grid_columnconfigure(0, weight=1)  # Allows the title frame to expand across the full width of the window
+        # Frame for the title
+        self.titulo_frame = tk.Frame(self, height=30, bg='#F8FEE4')
+        self.titulo_frame.grid(row=0, column=0, sticky="ew", columnspan=4) 
         self.grid_columnconfigure(0, weight=1)
-        # tk.Label(self.titulo_frame, text="LABORATORIO DE RAYOS X - IR14D", anchor="center", font=self.title_font).grid(row=0, column=0)
-        # Creando y posicionando el Label
-        label = tk.Label(self.titulo_frame, text="LABORATORIO DE RAYOS X - IR14D", font=self.title_font)
-        # label.grid(row=0, column=0, sticky="ew")
+        label = tk.Label(self.titulo_frame, text="PATRONES DE RAYOS X - IR14D", font=self.title_font, bg='#F8FEE4')
         label.grid(row=0, sticky="ew")
 
         # Create the frames of the first row
@@ -53,34 +78,24 @@ class ir14dGUI(tk.Tk):
         self.frame_row1.grid_columnconfigure(0, weight=1)  # Make frame1 expand to fill the space
 
         # Subframe for top options
-        self.subframe1_top = tk.Frame(self.frame1, borderwidth=2, relief="solid", bg='white')
+        self.subframe1_top = tk.Frame(self.frame1, borderwidth=2, relief="solid", bg='#F8FEE4')
         self.subframe1_top.grid(row=0, column=0, sticky="ew")
         
         # Creando una fuente personalizada
         custom_font = font.Font(family="Helvetica", size=16, weight="bold")
         # Aplicar la fuente al Label
-        label = tk.Label(self.subframe1_top, text="Medida a realizar:", bg='white', fg='black', font=custom_font)
+        label = tk.Label(self.subframe1_top, text="Medida a realizar:", fg='black', bg='#F8FEE4', font=custom_font)
         label.grid(row=0, column=0, sticky="w", padx=5, pady=5)
         # Aplicar la fuente al Combobox
-        self.option_menu = ttk.Combobox(self.subframe1_top, values=["Calibración de equipos", "Asignación de dosis"], font=custom_font)
+        self.option_var = tk.StringVar()
+        self.option_menu = ttk.Combobox(self.subframe1_top, values=["Calibración de equipos", "Asignación de dosis"], style="CustomCombobox.TCombobox", textvariable=self.option_var)
         self.option_menu.grid(row=0, column=1, sticky="ew", padx=10, pady=10)
-        self.option_menu.current(0)
+##### GUARDO DATOS SERVICIO: START
+        self.option_menu.bind("<FocusOut>", self.update_option_menuppal)
+        # Variable para almacenar la opción principal
+        self.option_menuppal = tk.StringVar()        
+##### GUARDO DATOS SERVICIO: END        
         self.option_menu.bind("<<ComboboxSelected>>", self.update_subframe)
-
-
-        # tk.Label(self.subframe1_top, text="Seleccione una opción:", bg='white', fg='black').grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        # self.option_menu = ttk.Combobox(self.subframe1_top, values=["Calibración de equipos", "Asignación de dosis"])
-        # self.option_menu.grid(row=0, column=1, sticky="ew", padx=10, pady=10)
-        # self.option_menu.current(0)
-        # self.option_menu.bind("<<ComboboxSelected>>", self.update_subframe)
-
-        # Creando y aplicando una fuente personalizada
-        # custom_font = font.Font(family="Helvetica", size=16, weight="bold")
-
-        # self.option_menu = ttk.Combobox(self.subframe1_top, values=["Seleccione una opción", "Calibración de equipos", "Asignación de dosis"], font=custom_font)
-        # self.option_menu.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
-        # self.option_menu.current(0)
-        # self.option_menu.bind("<<ComboboxSelected>>", self.update_subframe)
 
         # Subframe for additional controls, initially hidden
         self.subframe1_bottom = tk.Frame(self.frame1, borderwidth=2, relief="solid", bg='white')
@@ -97,81 +112,107 @@ class ir14dGUI(tk.Tk):
             widget.destroy()
 
         if selection == "Calibración de equipos":
-            self.subframe1_bottom.grid(row=1, column=0, sticky="nsew")
-
-            style = ttk.Style()
-            style.theme_use('default')
-            style.configure("TFrame", background="white")
-            style.configure("TLabel", background="white", foreground="black")
-            style.configure("TEntry", fieldbackground="white", background="white")
-            style.configure("TCombobox", fieldbackground="white", background="white")
+            self.subframe1_bottom.grid(row=1, column=0, sticky="nsew") 
             
             # Título para el subframe
-            tk.Label(self.subframe1_bottom, text="Datos del Servicio Técnico", bg='white', fg='black', font=('Helvetica', 14, 'bold')).grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+            tk.Label(self.subframe1_bottom, text="Datos del Servicio Técnico", bg='#F8FEE4', fg='black', font=('Helvetica', 14, 'bold')).grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=5)
 
             # Campo de Referencia del Servicio Técnico
             tk.Label(self.subframe1_bottom, text="Referencia del Servicio Técnico:", bg='white', fg='black').grid(row=1, column=0, sticky="w", padx=5, pady=5)
             self.entry_ref_servicio = tk.Entry(self.subframe1_bottom)
             self.entry_ref_servicio.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+##### GUARDO DATOS SERVICIO: START
+            self.entry_ref_servicio.bind("<FocusOut>", self.save_entry_ref_servicio)     
+##### GUARDO DATOS SERVICIO: END
 
             # Etiqueta para el campo de fecha
-            tk.Label(self.subframe1_bottom, text="Fecha del Servicio:", bg='white', fg='black').grid(row=2, column=0, sticky="w", padx=5, pady=5)
-
+            tk.Label(self.subframe1_bottom, text="Fecha del Servicio:", bg='white', fg='black').grid(row=2, column=0, sticky="w", padx=5, pady=5)            
             # Campo de entrada de fecha con calendario desplegable
             self.date_entry = DateEntry(self.subframe1_bottom, width=12, background='darkblue',
                                         foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
+            self.date_entry.delete(0, "end")
             self.date_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
+##### GUARDO DATOS SERVICIO: START    
+            self.date_entry.bind("<FocusOut>", self.save_date)
+##### GUARDO DATOS SERVICIO: END
 
             # Campo de Supervisor
             tk.Label(self.subframe1_bottom, text="Supervisor/a:", bg='white', fg='black').grid(row=3, column=0, sticky="w", padx=5, pady=5)
             self.combo_supervisor = ttk.Combobox(self.subframe1_bottom, values=["Marta Borrego Ramos", "Xandra Campo Blanco", "Miguel Embid Segura"])
             self.combo_supervisor.grid(row=3, column=1, sticky="ew", padx=5, pady=5)
+##### GUARDO DATOS SERVICIO: START
+            self.combo_supervisor.bind("<FocusOut>", self.save_supervisor) 
+##### GUARDO DATOS SERVICIO: END
 
             # Datos del Equipo a calibrar
-            tk.Label(self.subframe1_bottom, text="Datos del Equipo a calibrar", bg='white', fg='black', font=('Helvetica', 14, 'bold')).grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+            tk.Label(self.subframe1_bottom, text="Datos del Equipo a calibrar", bg='#F8FEE4', fg='black', font=('Helvetica', 14, 'bold')).grid(row=5, column=0, columnspan=2, sticky="w", padx=5, pady=5)
 
             # Campo de Cliente
             tk.Label(self.subframe1_bottom, text="Cliente:", bg='white', fg='black').grid(row=6, column=0, sticky="w", padx=5, pady=5)
             self.entry_cliente = tk.Entry(self.subframe1_bottom)
             self.entry_cliente.grid(row=6, column=1, sticky="ew", padx=5, pady=5)
+##### GUARDO DATOS SERVICIO: START
+            self.entry_cliente.bind("<FocusOut>", self.save_entry_cliente) 
+##### GUARDO DATOS SERVICIO: END
+
 
             # Campo de Dirección Cliente
             tk.Label(self.subframe1_bottom, text="Dirección Cliente:", bg='white', fg='black').grid(row=7, column=0, sticky="w", padx=5, pady=5)
-            self.entry_cliente = tk.Entry(self.subframe1_bottom)
-            self.entry_cliente.grid(row=7, column=1, sticky="ew", padx=5, pady=5)
+            self.dir_cliente = tk.Text(self.subframe1_bottom, height=4, width=28)
+            self.dir_cliente.grid(row=7, column=1, sticky="ew", padx=5, pady=5)
+            scroll = tk.Scrollbar(self.subframe1_bottom, command=self.dir_cliente.yview)
+            scroll.grid(row=7, column=2, sticky='ns')
+            self.dir_cliente['yscrollcommand'] = scroll.set
+##### GUARDO DATOS SERVICIO: START 
+            self.dir_cliente.bind("<FocusOut>", self.save_dir_cliente)       
+##### GUARDO DATOS SERVICIO: END
 
             # Campo de Marca
             tk.Label(self.subframe1_bottom, text="Marca:", bg='white', fg='black').grid(row=8, column=0, sticky="w", padx=5, pady=5)
             self.entry_marca = tk.Entry(self.subframe1_bottom)
             self.entry_marca.grid(row=8, column=1, sticky="ew", padx=5, pady=5)
+##### GUARDO DATOS SERVICIO: START 
+            self.entry_marca.bind("<FocusOut>", self.save_entry_marca)       
+##### GUARDO DATOS SERVICIO: END
 
             # Campo de Modelo
             tk.Label(self.subframe1_bottom, text="Modelo:", bg='white', fg='black').grid(row=9, column=0, sticky="w", padx=5, pady=5)
             self.entry_modelo = tk.Entry(self.subframe1_bottom)
             self.entry_modelo.grid(row=9, column=1, sticky="ew", padx=5, pady=5)
+##### GUARDO DATOS SERVICIO: START 
+            self.entry_modelo.bind("<FocusOut>", self.save_entry_modelo)       
+##### GUARDO DATOS SERVICIO: END
 
             # Campo de NumSerie
             tk.Label(self.subframe1_bottom, text="Número de serie:", bg='white', fg='black').grid(row=10, column=0, sticky="w", padx=5, pady=5)
             self.entry_numserie = tk.Entry(self.subframe1_bottom)
             self.entry_numserie.grid(row=10, column=1, sticky="ew", padx=5, pady=5)
+##### GUARDO DATOS SERVICIO: START 
+            self.entry_numserie.bind("<FocusOut>", self.save_entry_numserie)       
+##### GUARDO DATOS SERVICIO: END            
 
             # Datos de la calibración
-            tk.Label(self.subframe1_bottom, text="Datos del tipo de calibración", bg='white', fg='black', font=('Helvetica', 14, 'bold')).grid(row=12, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+            tk.Label(self.subframe1_bottom, text="Datos del tipo de calibración", bg='#F8FEE4', fg='black', font=('Helvetica', 14, 'bold')).grid(row=12, column=0, columnspan=2, sticky="w", padx=5, pady=5)
 
             # Campo de Magnitud de medida
             tk.Label(self.subframe1_bottom, text="Magnitud de Medida:", bg='white', fg='black').grid(row=13, column=0, sticky="w", padx=5, pady=5)
-            units_options = ["Equivalente de dosis direccional H´(0,07)", "Equivalente de dosis direccional H´(3)", "Equivalente de dosis ambiental H*(10)", "Exposición", "Kerma en aire", "Dosis aborbida en aire"]
+            units_options = ["Equivalente de dosis direccional H´(0,07)", "Equivalente de dosis direccional H´(3)", "Equivalente de dosis ambiental H*(10)", "Exposición", "Kerma en aire", "Dosis absorbida en aire"]
             self.combo_units = ttk.Combobox(self.subframe1_bottom, values=units_options, width=35)
             self.combo_units.grid(row=13, column=1, sticky="ew", padx=5, pady=5)
             self.combo_units.bind("<<ComboboxSelected>>", self.fetch_correction_factor)
-            
+##### GUARDO DATOS SERVICIO: START 
+            self.combo_units.bind("<FocusOut>", self.save_combo_units)       
+##### GUARDO DATOS SERVICIO: END 
+
             # Etiquetas para mostrar las unidades seleccionadas
             self.label_rate = tk.Label(self.subframe1_bottom, text="Unidades de tasa: ........", bg='white', fg='black')
             self.label_rate.grid(row=14, column=0, sticky="w", padx=5, pady=5)
+
             self.label_unit = tk.Label(self.subframe1_bottom, text="Unidades: ........", bg='white', fg='black')
             self.label_unit.grid(row=14, column=1, sticky="w", padx=5, pady=5)
+
             self.combo_units.bind("<<ComboboxSelected>>", self.update_labels)
-            self.combo_units.current(0)
+            # self.combo_units.current('')
             self.update_labels(None)
 
             # Cargar datos de calibración desde JSON
@@ -181,13 +222,17 @@ class ir14dGUI(tk.Tk):
             # Campo de Calidad de Radiación
             tk.Label(self.subframe1_bottom, text="Calidad de radiación:", bg='white', fg='black').grid(row=16, column=0, sticky="w", padx=5, pady=5)
             self.combo_quality = ttk.Combobox(self.subframe1_bottom, values=["L-10 1 m", "L-10 2,5 m", "L-20 1 m", "L-20 2,5 m", "L-30 1 m", "L-30 2,5 m", "L-35 1 m", "L-35 2,5 m", "L-55", "L-70", "L-100", "L-125", "L-170", "L-210", "L-240", "N-10 1 m", "N-10 2,5 m", "N-15 1 m", "N-15 2,5 m", "N-20 1 m", "N-20 2,5 m", "N-25 1 m", "N-25 2,5 m", "N-30 1 m", "N-30 2,5 m", "N-40 1 m", "N-40 2,5 m", "N-60", "N-80", "N-100", "N-120", "N-150", "N-200", "N-250", "N-300", "W-30 1 m", "W-30 2,5 m", "W-40 1 m", "W-40 2,5 m", "W-60", "W-80", "W-110", "W-150", "W-200", "W-250", "W-300"])
-            self.combo_quality.grid(row=16, column=1, sticky="ew", padx=5, pady=5)
+            self.combo_quality.grid(row=16, column=1, sticky="ew", padx=5, pady=5)            
+##### GUARDO DATOS SERVICIO: START 
+            self.combo_quality.bind("<FocusOut>", self.save_combo_quality)       
+##### GUARDO DATOS SERVICIO: END 
             self.combo_quality.bind("<<ComboboxSelected>>", self.handle_quality_selected)
                         
             self.entry = tk.Entry(self.subframe1_bottom)
             tk.Label(self.subframe1_bottom, text="Coef. Conversión de Ka a mag. medida: ", bg='white', fg='black').grid(row=17, column=0, sticky="w", padx=5, pady=5)
             # self.entry.grid(row=16, column=0, sticky="w", padx=5, pady=5)
             self.entry.bind("<Return>", self.on_entry_return)  
+            self.combo_quality.bind("<<ComboboxSelected>>", self.handle_quality_selected)            
             self.correction_factor_label = tk.Label(self.subframe1_bottom, text="Coef. Conversión de Ka a mag. medida: ", textvariable=self.correction_factor_var, bg='white', fg='black')
             self.correction_factor_label.grid(row=17, column=1, sticky="w", padx=5, pady=5)
    
@@ -195,7 +240,10 @@ class ir14dGUI(tk.Tk):
             tk.Label(self.subframe1_bottom, text="Cámara patrón:", bg='white', fg='black').grid(row=18, column=0, sticky="w", padx=5, pady=5)
             self.combo_chamber = ttk.Combobox(self.subframe1_bottom, values=["NE 2575-ns557-IR14D/014", "NE 2575-ns506-IR14D/006"])
             self.combo_chamber.grid(row=18, column=1, sticky="ew", padx=5, pady=5)
-            self.combo_chamber.bind("<<ComboboxSelected>>", self.handle_chamber_selected)
+##### GUARDO DATOS SERVICIO: START 
+            self.combo_chamber.bind("<FocusOut>", self.save_combo_chamber)       
+##### GUARDO DATOS SERVICIO: END             
+            self.combo_chamber.bind("<<ComboboxSelected>>", self.handle_chamber_selected)         
 
             # Coeficiente de calibración
             self.calibration_coefficient_var = tk.StringVar()
@@ -207,6 +255,11 @@ class ir14dGUI(tk.Tk):
             tk.Label(self.subframe1_bottom, text="Factor de calibración:", bg='white', fg='black').grid(row=19, column=1, sticky="w", padx=5)
             tk.Label(self.subframe1_bottom, textvariable=self.calibration_factor_var, bg='white', fg='black').grid(row=19, column=1, sticky="e", padx=5)
 
+            # Factor de Atenuación del Aire
+            self.fcaa_var = tk.StringVar()
+            tk.Label(self.subframe1_bottom, text="Factor de atenuación del aire:", bg='white', fg='black').grid(row=20, column=0, sticky="w", padx=5)
+            tk.Label(self.subframe1_bottom, textvariable=self.fcaa_var, bg='white', fg='black').grid(row=20, column=0, sticky="e", padx=5)
+
             # Asegurarse de que los widgets se expandan apropiadamente
             self.subframe1_bottom.columnconfigure(1, weight=1)
 
@@ -215,113 +268,137 @@ class ir14dGUI(tk.Tk):
             self.frame2.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)  # Asumimos que frame_row1 ya está usando grid
 
             # Título para el Frame 2
-            self.title_label_frame2 = tk.Label(self.frame2, text="Instrumentación", bg='white', fg='black', font=('Helvetica', 14, 'bold'))
-            self.title_label_frame2.grid(row=0, column=0, sticky="w")  # El título se extiende a lo largo de dos columnas, alineado a la izquierda
+            self.title_label_frame2 = tk.Label(self.frame2, text="Instrumentación", bg='#F8FEE4', fg='black', font=('Helvetica', 14, 'bold'))
+            self.title_label_frame2.grid(row=0, column=0, columnspan=4, sticky="w")  
 
             # Campos Frame 2
-            self.label_proc_ref = tk.Label(self.frame2, text="Procedimiento:", bg='white', fg='black', width=18)
-            self.entry_proc_ref = tk.Entry(self.frame2, width=12)
-            self.entry_proc_ref.insert(0, "P-LMRI-C-12")
-            self.label_proc_ref.grid(row=1, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la izquierda
-            self.entry_proc_ref.grid(row=1, column=1, sticky="w")
-
-            self.label_electrom_ref = tk.Label(self.frame2, text="Electrómetro medidas:", bg='white', fg='black', width=18) 
-            self.entry_electrom_ref = tk.Entry(self.frame2, width=12)
-            self.entry_electrom_ref.insert(0, "IR14D/018")  
-            self.label_electrom_ref.grid(row=2, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la derecha
-            self.entry_electrom_ref.grid(row=2, column=1, sticky="w")  # Campo de entrada en la segunda columna, alineado a la izquierda
-            self.label_elecppal_com = tk.Label(self.frame2, text="COM:", bg='white')
-            self.label_elecppal_com.grid(row=2, column=2, sticky="w")
+            # Procedimiento
+            self.label_proc = tk.Label(self.frame2, text="Procedimiento", bg='white', fg='black', width=11)
+            self.label_proc.grid(row=1, column=0, sticky="w", padx=(5, 0))  # Etiqueta alineada a la izquierda
+            self.combo_proc = ttk.Combobox(self.frame2, values=["P-LMRI-C-12", "P-LMRI-C-13", "P-LMRI-C-26"], width=13)  
+            self.combo_proc.grid(row=1, column=0, sticky="w", padx=(0, 5))        
+##### GUARDO DATOS FRAME 2: START 
+            self.combo_proc.bind("<FocusOut>", self.save_combo_proc)       
+##### GUARDO DATOS FRAME 2: END 
+               
+            # Electrómetro de medida
+            self.label_electrom_ref = tk.Label(self.frame2, text="Electr. Ppal", bg='white', fg='black', width=11)
+            self.label_electrom_ref.grid(row=2, column=0, sticky="w", padx=(5, 0))  # Etiqueta alineada a la izquierda
+            self.combo_electrom_ref = ttk.Combobox(self.frame2, values=["IR14D-18", "IR14D-28", "IR14D-41"], width=8)
+            self.combo_electrom_ref.grid(row=2, column=0, sticky="w", padx=(0, 5))       
+##### GUARDO DATOS FRAME 2: START 
+            self.combo_electrom_ref.bind("<FocusOut>", self.save_combo_electrom_ref)       
+##### GUARDO DATOS FRAME 2: END
+            self.label_elecppal_com = tk.Label(self.frame2, text="Puerto Elec.PPal:", bg='white')
+            self.label_elecppal_com.grid(row=2, column=1, sticky="w", padx=(5, 0))
             opciones_elecppal_com = ["SIMU"] + [f'COM{i}' for i in range(1, 11)]
             self.elecppal_com_var = tk.StringVar(value="??")
             self.elecppal_com_optionmenu = tk.OptionMenu(self.frame2, self.elecppal_com_var, *opciones_elecppal_com)
-            self.elecppal_com_optionmenu.grid(row=2, column=3, sticky="w")
+            self.elecppal_com_optionmenu.grid(row=2, column=2, sticky="w", padx=(0, 5))
             self.elecppal_com_optionmenu.configure(bg='white')
 
-            self.label_elecmonit_ref = tk.Label(self.frame2, text="Electrómetro monitor:", bg='white', fg='black', width=18)
-            self.entry_elecmonit_ref = tk.Entry(self.frame2, width=12)
-            self.entry_elecmonit_ref.insert(0, "IR14D/018")  
-            self.label_elecmonit_ref.grid(row=3, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la derecha
-            self.entry_elecmonit_ref.grid(row=3, column=1, sticky="w")  # Campo de entrada en la segunda columna, alineado a la izquierda
-            self.label_elecmonit_com = tk.Label(self.frame2, text="COM:", bg='white')
-            self.label_elecmonit_com.grid(row=3, column=2, sticky="w")
+            # Electrómetro Monitor
+            self.label_elecmonit_ref = tk.Label(self.frame2, text="Electr. Monitor", bg='white', fg='black', width=11)
+            self.label_elecmonit_ref.grid(row=3, column=0, sticky="w", padx=(5, 0))  # Etiqueta alineada a la izquierda
+            self.combo_elecmonit_ref = ttk.Combobox(self.frame2, values=["IR14D-18", "IR14D-28", "IR14D-41"], width=8)
+            self.combo_elecmonit_ref.grid(row=3, column=0, sticky="w", padx=(0, 5))       
+##### GUARDO DATOS FRAME 2: START 
+            self.combo_elecmonit_ref.bind("<FocusOut>", self.save_combo_elecmonit_ref)       
+##### GUARDO DATOS FRAME 2: END
+            self.label_elecmonit_com = tk.Label(self.frame2, text="Puerto Elec.Mon:", bg='white')
+            self.label_elecmonit_com.grid(row=3, column=1, sticky="w", padx=(5, 0))
             opciones_elecmonit_com = ["SIMU"] + [f'COM{i}' for i in range(1, 11)]
             self.elecmonit_com_var = tk.StringVar(value="??")
             self.elecmonit_com_optionmenu = tk.OptionMenu(self.frame2, self.elecmonit_com_var, *opciones_elecmonit_com)
-            self.elecmonit_com_optionmenu.grid(row=3, column=3, sticky="w")
+            self.elecmonit_com_optionmenu.grid(row=3, column=2, sticky="w", padx=(0, 5))
             self.elecmonit_com_optionmenu.configure(bg='white')
 
-            self.label_barom_ref = tk.Label(self.frame2, text="Barómetro:", bg='white', fg='black', width=18)
-            self.entry_barom_ref = tk.Entry(self.frame2, width=12)
-            self.entry_barom_ref.insert(0, "IR14D/009")  
-            self.label_barom_ref.grid(row=4, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la derecha
-            self.entry_barom_ref.grid(row=4, column=1, sticky="w")  # Campo de entrada en la segunda columna, alineado a la izquierda
-            self.label_barom_com = tk.Label(self.frame2, text="COM:", bg='white')
-            self.label_barom_com.grid(row=4, column=2, sticky="w")
+            # Barómetro
+            self.label_barom_ref = tk.Label(self.frame2, text="Barómetro", bg='white', fg='black', width=11)
+            self.label_barom_ref.grid(row=4, column=0, sticky="w", padx=(5, 0))  # Etiqueta alineada a la izquierda
+            self.combo_barom_ref = ttk.Combobox(self.frame2, values=["IR14D-09", "IR14D-30"], width=8)
+            self.combo_barom_ref.grid(row=4, column=0, sticky="e", padx=(0, 5))      
+##### GUARDO DATOS FRAME 2: START 
+            self.combo_barom_ref.bind("<FocusOut>", self.save_combo_barom_ref)       
+##### GUARDO DATOS FRAME 2: END
+            self.label_barom_com = tk.Label(self.frame2, text="Puerto Baromm:", bg='white')
+            self.label_barom_com.grid(row=4, column=1, sticky="w", padx=(5, 0))
             opciones_barom_com = ["SIMU"] + [f'COM{i}' for i in range(1, 11)]
             self.barom_com_var = tk.StringVar(value="??")
             self.barom_com_optionmenu = tk.OptionMenu(self.frame2, self.barom_com_var, *opciones_barom_com, command=self.frame5_run)
-            self.barom_com_optionmenu.grid(row=4, column=3, sticky="w")
+            self.barom_com_optionmenu.grid(row=4, column=2, sticky="w", padx=(0, 5))
             self.barom_com_optionmenu.configure(bg='white')
 
-            self.label_temp_ref = tk.Label(self.frame2, text="Termómetro:", bg='white', fg='black', width=18)
-            self.entry_temp_ref = tk.Entry(self.frame2, width=12)
-            self.entry_temp_ref.insert(0, "IR14D/010")  
-            self.label_temp_ref.grid(row=5, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la derecha
-            self.entry_temp_ref.grid(row=5, column=1, sticky="w")  # Campo de entrada en la segunda columna, alineado a la izquierda
-            self.label_temp_com = tk.Label(self.frame2, text="COM:", bg='white')
-            self.label_temp_com.grid(row=5, column=2, sticky="w")
+            # Termómetro
+            self.label_temp_ref = tk.Label(self.frame2, text="Termómetro", bg='white', fg='black', width=11)
+            self.label_temp_ref.grid(row=5, column=0, sticky="w", padx=(5, 0))  # Etiqueta alineada a la izquierda
+            self.combo_temp_ref = ttk.Combobox(self.frame2, values=["IR14D-10", "IR14D-32"], width=8)
+            self.combo_temp_ref.grid(row=5, column=0, sticky="e", padx=(0, 5))      
+##### GUARDO DATOS FRAME 2: START 
+            self.combo_temp_ref.bind("<FocusOut>", self.save_combo_temp_ref)       
+##### GUARDO DATOS FRAME 2: END
+            self.label_temp_com = tk.Label(self.frame2, text="Puerto Termo:", bg='white')
+            self.label_temp_com.grid(row=5, column=1, sticky="w", padx=(5, 0)) 
             opciones_temp_com = ["SIMU"] + [f'COM{i}' for i in range(1, 11)]
             self.temp_com_var = tk.StringVar(value="??")
             self.temp_com_optionmenu = tk.OptionMenu(self.frame2, self.temp_com_var, *opciones_temp_com, command=self.frame5_run_temp)
-            self.temp_com_optionmenu.grid(row=5, column=3, sticky="w")
+            self.temp_com_optionmenu.grid(row=5, column=2, sticky="w", padx=(5, 0)) 
             self.temp_com_optionmenu.configure(bg='white')
 
-            self.label_crono_ref = tk.Label(self.frame2, text="Cronómetro:", bg='white', fg='black', width=18)
-            self.entry_crono_ref = tk.Entry(self.frame2, width=12)
-            self.entry_crono_ref.insert(0, "IR14D/018")  
-            self.label_crono_ref.grid(row=6, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la derecha
-            self.entry_crono_ref.grid(row=6, column=1, sticky="w")  # Campo de entrada en la segunda columna, alineado a la izquierda
+            # Cronómetro
+            self.label_crono_ref = tk.Label(self.frame2, text="Cronómetro", bg='white', fg='black', width=11)
+            self.label_crono_ref.grid(row=6, column=0, sticky="w", padx=(5, 0))  # Etiqueta alineada a la izquierda
+            self.combo_crono_ref = ttk.Combobox(self.frame2, values=["IR14D-19", "IR14D-18", "IR14D-28"], width=8)
+            self.combo_crono_ref.grid(row=6, column=0, sticky="e", padx=(0, 5))      
+##### GUARDO DATOS FRAME 2: START 
+            self.combo_crono_ref.bind("<FocusOut>", self.save_combo_crono_ref)       
+##### GUARDO DATOS FRAME 2: END
 
-            self.label_colim_ref = tk.Label(self.frame2, text="Colimador:", bg='white', fg='black', width=18)
-            self.entry_colim_ref = tk.Entry(self.frame2, width=12)
-            self.entry_colim_ref.insert(0, "B80")  
-            self.label_colim_ref.grid(row=7, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la derecha
-            self.entry_colim_ref.grid(row=7, column=1, sticky="w")  # Campo de entrada en la segunda columna, alineado a la izquierda
+            # Colimador
+            self.label_colim_ref = tk.Label(self.frame2, text="Colimador", bg='white', fg='black', width=11)
+            self.label_colim_ref.grid(row=7, column=0, sticky="w", padx=(5, 0))  # Etiqueta alineada a la izquierda
+            self.combo_colim_ref = ttk.Combobox(self.frame2, values=["B20", "B40", "B60", "B80", "B100"], width=8)
+            self.combo_colim_ref.grid(row=7, column=0, sticky="e", padx=(0, 5))      
+##### GUARDO DATOS FRAME 2: START 
+            self.combo_colim_ref.bind("<FocusOut>", self.save_combo_colim_ref)       
+##### GUARDO DATOS FRAME 2: END
 
             # Datos de la calibración
-            self.title2_label_frame2 = tk.Label(self.frame2, text="Medidas de la Calibración", bg='white', fg='black', font=('Helvetica', 14, 'bold'))
-            self.title2_label_frame2.grid(row=9, column=0, columnspan=2, sticky="w")  # El título se extiende a lo largo de dos columnas
+            self.title2_label_frame2 = tk.Label(self.frame2, text="Medidas de la Calibración", bg='#F8FEE4', fg='black', font=('Helvetica', 14, 'bold'))
+            self.title2_label_frame2.grid(row=9, column=0, columnspan=4, sticky="w")  # El título se extiende a lo largo de dos columnas
 
+            # Distancia de irradiación
             self.label_dist_ref = tk.Label(self.frame2, text="Distancia al foco (m):", bg='white', fg='black', width=18)
-            self.entry_dist_ref = tk.Entry(self.frame2, width=12)
-            self.entry_dist_ref.insert(0, "2,000")  
-            self.label_dist_ref.grid(row=10, column=0, sticky="w")  # Etiqueta en la primera columna, alineada a la derecha
-            self.entry_dist_ref.grid(row=10, column=1, sticky="w")  # Campo de entrada en la segunda columna, alineado a la izquierda
+            self.entry_dist_ref = tk.Entry(self.frame2, width=8, validate="key", validatecommand=(self.register(self.validate_number), "%P"))
+            self.label_dist_ref.grid(row=10, column=0, sticky="w", padx=(5, 0))  # Etiqueta en la primera columna, alineada a la izquierda
+            self.entry_dist_ref.grid(row=10, column=0, sticky="e", padx=(0, 5))
+##### GUARDO DATOS FRAME 2: START 
+            self.entry_dist_ref.bind("<FocusOut>", self.save_entry_dist_ref)       
+##### GUARDO DATOS FRAME 2: END
 
-            # Campo de Magnitud de medida
-            # self.label_fcdist_ref = tk.Label(self.frame2, text="Factor correción de distancia:", bg='white', fg='black')
-            # fcdist_options = ["No", "Sí"]
-            # self.combo_fcdist_ref = ttk.Combobox(self.frame2, values=fcdist_options, width=5)
-            # self.combo_fcdist_ref.grid(row=10, column=0, sticky="w")
-            # self.combo_fcdist_ref.grid(row=10, column=1, sticky="w", padx=5, pady=5)
-
+            # Campo de Factor correción de distancia
+            # Etiqueta para el combobox
             self.label_fcdist_ref = tk.Label(self.frame2, text="Factor corrección dist:", bg='white', fg='black', width=18)
             self.label_fcdist_ref.grid(row=11, column=0, sticky="w")
-            # Combobox y su configuración
             fcdist_options = ["No", "Sí"]
             self.combo_fcdist_ref = ttk.Combobox(self.frame2, values=fcdist_options, width=5)
             self.combo_fcdist_ref.grid(row=11, column=1, sticky="w", padx=5, pady=5)
             self.combo_fcdist_ref.bind("<<ComboboxSelected>>", self.on_fcdist_change)
+
+            # Factor correción de distancia
+            self.fcd_label = tk.Label(self.frame2, text="FCD:")
+            self.fcd_label.grid(row=11, column=2, sticky="w")           
+            self.fcd_var = tk.StringVar(value='Seleccione una opción')
+            self.fcd_value_label = tk.Label(self.frame2, textvariable=self.fcd_var, bg='white', fg='black', width=5)
+            self.fcd_value_label.grid(row=11, column=3, sticky="w")
             self.data_labels = []
 
-            #self.entry = tk.Entry(self.frame2)
-            self.fcd_label = tk.Label(self.frame2, text="FCD: ", bg='white', fg='black', width=5)
-            self.fcd_label.grid(row=11, column=2, sticky="w", padx=5, pady=5)
-            #self.entry.bind("<Return>", self.on_entry_return)  
-            self.fcd_var = tk.Entry(self.frame2, width=12)
-            self.fcd_var.insert(0, "1,00")           
-            self.fcd_var.grid(row=11, column=3, sticky="w", padx=5, pady=5)
+            # Etiqueta Corrección electrómetro
+            self.fcelec_label = tk.Label(self.frame2, text="Factor corrección rango electrómetro:", bg='white')
+            self.fcelec_label.grid(row=12, column=0, sticky="w")
+            self.fcelec_var = tk.StringVar(value='Seleccione Rango')
+            self.fcelec_value_label = tk.Label(self.frame2, textvariable=self.fcelec_var, bg='white', fg='black', width=18)
+            self.fcelec_value_label.grid(row=12, column=1, sticky="w")
 
             # Ajustar las configuraciones de la columna para que las etiquetas y entradas estén bien alineadas
             self.frame2.grid_columnconfigure(0, weight=1)  # Hace que la columna de las etiquetas tenga cierta expansión
@@ -329,46 +406,42 @@ class ir14dGUI(tk.Tk):
 
             # Inicialmente ocultar todos los campos (si es necesario)
             self.title_label_frame2.grid_remove()
-            self.label_proc_ref.grid_remove()
-            self.entry_proc_ref.grid_remove()
+            self.label_proc.grid_remove()
+            self.combo_proc.grid_remove()
             self.label_electrom_ref.grid_remove()
-            self.entry_electrom_ref.grid_remove()
+            self.combo_electrom_ref.grid_remove()
             self.label_elecppal_com.grid_remove()
             self.elecppal_com_optionmenu.grid_remove()
             self.label_elecmonit_ref.grid_remove()
-            self.entry_elecmonit_ref.grid_remove()
+            self.combo_elecmonit_ref.grid_remove()
             self.label_elecmonit_com.grid_remove()
             self.elecmonit_com_optionmenu.grid_remove()
             self.label_barom_ref.grid_remove()
-            self.entry_barom_ref.grid_remove()
+            self.combo_barom_ref.grid_remove()
             self.label_barom_com.grid_remove()
             self.barom_com_optionmenu.grid_remove()
             self.label_temp_ref.grid_remove()
-            self.entry_temp_ref.grid_remove()
+            self.combo_temp_ref.grid_remove()
             self.label_temp_com.grid_remove()
             self.temp_com_optionmenu.grid_remove()
             self.label_crono_ref.grid_remove()
-            self.entry_crono_ref.grid_remove()
+            self.combo_crono_ref.grid_remove()
             self.label_colim_ref.grid_remove()
-            self.entry_colim_ref.grid_remove()
+            self.combo_colim_ref.grid_remove()
             self.title2_label_frame2.grid_remove()
             self.label_dist_ref.grid_remove()
             self.entry_dist_ref.grid_remove()
             self.label_fcdist_ref.grid_remove()
             self.combo_fcdist_ref.grid_remove()
             self.fcd_label.grid_remove()
-            self.fcd_var.grid_remove()
-
+            self.fcd_value_label.grid_remove()
+            self.fcelec_label.grid_remove()
+            self.fcelec_value_label.grid_remove()
             
             # Frame 3 setup
             self.frame3 = tk.Frame(self.frame_row1, borderwidth=2, relief="solid", bg='white')
             self.frame3.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
             tk.Label(self.frame3, text="Frame 3", bg='white', fg='black').grid(row=0, column=0)
-
-            # Frame 4 setup
-            #self.frame4 = tk.Frame(self.frame_row1, borderwidth=2, relief="solid", bg='white')
-            #self.frame4.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
-            #tk.Label(self.frame4, text="Frame 4", bg='white', fg='black').grid(row=0, column=0)
 
             # Setting up frame_row2
             self.frame_row2 = tk.Frame(self.master, borderwidth=2, relief="solid", bg='white')
@@ -386,7 +459,8 @@ class ir14dGUI(tk.Tk):
             # Frame 6 setup
             self.frame6 = tk.Frame(self.frame_row2, borderwidth=2, relief="solid", bg='white')
             self.frame6.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
-            tk.Label(self.frame6, text="Frame 6", bg='white', fg='black').grid(row=0, column=0)
+            self.setup_treeview()
+            self.frame6.grid_remove()  # Oculta el frame6 inicialmente
 
         elif selection == "Asignación de dosis":
             self.subframe1_bottom.grid(row=1, column=0, sticky="ew", padx=5, pady=5)  # Use grid to place this frame
@@ -398,6 +472,215 @@ class ir14dGUI(tk.Tk):
             ttk.Combobox(self.subframe1_bottom, values=["Fondo", "Equipo", "Dosímetro"]).grid(row=2, column=1, sticky="ew")
         else:
             self.subframe1_bottom.grid_remove()  # Hide this frame using grid_remove()
+
+ 
+    def validate_number(self, P):
+        # Permite solo números decimales en la entrada
+        if P == "" or P.isdigit():
+            return True
+        elif P.count('.') == 1 and P.replace('.', '').isdigit() and P.index('.') != 0:
+            return True
+        return False
+##### GUARDANDO DATOS: START
+### FRAME 1: START
+    def update_option_menuppal(self, event=None):  # Puede ser llamado con o sin evento
+        new_value = self.option_var.get()
+        if new_value:  # Verifica si new_value no está vacío
+            self.option_menuppal.set(new_value)
+            self.dataxls['Tipo de Servicio'] = new_value
+        
+    def save_entry_ref_servicio(self, event):
+        self.dataxls["Referencia del Servicio Técnico"] = [self.entry_ref_servicio.get()]
+        pass         
+
+    def save_date(self, event):
+        self.dataxls["Fecha"] = [self.date_entry.get()]
+        pass
+
+    def save_supervisor(self, event):
+        self.dataxls["Supervisor"] = [self.combo_supervisor.get()]
+        pass
+
+    def save_entry_cliente(self, event):
+        self.dataxls["Cliente"] = [self.entry_cliente.get()]
+        pass
+
+    def save_dir_cliente(self, event):
+        self.dataxls["Dirección"] = [self.dir_cliente.get("1.0", "end-1c")]
+        pass
+
+    def save_entry_marca(self, event):
+        self.dataxls["Marca"] = [self.entry_marca.get()]
+        pass
+
+    def save_entry_modelo(self, event):
+        self.dataxls["Modelo"] = [self.entry_modelo.get()]
+        pass
+
+    def save_entry_numserie(self, event):
+        self.dataxls["Número de serie"] = [self.entry_numserie.get()]
+        pass
+
+    def save_combo_units(self, event):
+        self.dataxls["Magnitud de Medida"] = [self.combo_units.get()]
+        pass
+
+    def save_label_rate(self, unitsrate):
+        self.dataxls["Unidades de tasa de la Magnitud de Medida"] = [unitsrate]
+        pass
+
+    def save_label_unit(self, unitsunit):
+        self.dataxls["Unidades de la Magnitud de Medida"] = [unitsunit]
+        pass
+
+    def save_combo_quality(self, event):
+        self.dataxls["Calidad"] = [self.combo_quality.get()]
+        pass
+
+    def save_correction_factor(self, event):
+        self.dataxls["Factor de corrección"] = [self.correction_factor_var.get()]
+        pass
+
+    def save_combo_chamber(self, event):
+        self.dataxls["Cámara patrón"] = [self.combo_chamber.get()]
+        pass
+
+    def save_calibration_coefficient(self, event):
+        self.dataxls["Coeficiente de calibración"] = [self.calibration_coefficient_var.get()]
+
+        pass
+
+    def save_calibration_factor(self, event):
+        self.dataxls["Factor de calibración"] = [self.calibration_factor_var.get()]
+        pass
+
+    def save_fcaa(self, event):
+        self.dataxls["Factor de Atenuación del Aire"] = [self.fcaa_var.get()]   
+        pass
+### FRAME 1: END
+### FRAME 2: START
+    def save_combo_proc(self, event):
+        self.dataxls["Procedimiento utilizado"] = [self.combo_proc.get()]
+        pass
+
+    def save_combo_electrom_ref(self, event):
+        self.dataxls["Electrómetro Medidas"] = [self.combo_electrom_ref.get()]
+        pass
+
+    def save_combo_elecmonit_ref(self, event):
+        self.dataxls["Electrómetro Monitor"] = [self.combo_elecmonit_ref.get()]
+        pass
+
+    def save_combo_barom_ref(self, event):
+        self.dataxls["Barómetro"] = [self.combo_barom_ref.get()]
+        pass
+
+    def save_combo_temp_ref(self, event):
+        self.dataxls["Termómetro"] = [self.combo_temp_ref.get()]
+        pass
+
+    def save_combo_crono_ref(self, event):
+        self.dataxls["Cronómetro"] = [self.combo_crono_ref.get()]
+        pass
+    
+    def save_combo_colim_ref(self, event):
+        self.dataxls["Colimador"] = [self.combo_colim_ref.get()]
+        print(self.dataxls)
+
+    def save_entry_dist_ref(self, event):
+        self.datamed["Distancia de irradiación"] = [self.entry_dist_ref.get()]
+        pass
+
+    def save_entry_time_patron(self, event):
+        self.datamed["Tiempo de irradiación"] = [self.entry_time_patron.get()]
+        pass
+
+    def save_entry_Irx_patron(self, event):
+        self.datamed["Intensidad de irradiación"] = [self.entry_Irx_patron.get()]
+        pass
+
+    def save_combo_range_patron(self, event):
+        self.datamed["Rango Electrómetro"] = [self.combo_range.get()]
+        pass
+
+    def save_felec_var(self, *args):
+        self.datamed["Factor rango electrómetro"] = [self.fcelec_var.get()]
+        pass
+
+    def save_fcd_var(self, *args):
+        self.datamed["Factor corrección distancia"] = [self.fcd_var.get()]
+        print(self.datamed)
+        pass
+### FRAME 2: END
+### DATOS FACTOR CORRECION DISTANCIA: START
+    def save_entry_time_fcd(self, event):
+        self.datafcd["Tiempo de irradiación FCD"] = [self.entry_time_fcd.get()]
+        print("Guardando tiempo:", self.entry_time_fcd.get())
+        pass
+
+    def save_entry_fcd(self, event):
+        self.datafcd["Intensidad de irradiación FCD"] = [self.entry_fcd.get()]
+        print("Guardando intensidad:", self.entry_fcd.get()) 
+        pass
+
+    def save_combo_range_fcd(self, event):
+        self.datafcd["Rango Electrómetro FCD"] = [self.combo_range_fcd.get()]
+        print(self.combo_range_fcd.get())
+        print(self.datafcd)
+        pass
+### DATOS FACTOR CORRECION DISTANCIA: END
+##### GUARDANDO DATOS: END
+
+##### FRAME6 START:
+    def setup_treeview(self):
+        self.tree = ttk.Treeview(self.frame6, height=4, show='headings')
+        self.tree.grid(row=1, column=0, sticky="nsew", columnspan=11)
+        self.tree.bind("<Motion>", self.check_mouse_position)
+
+        column_headers = [
+            "Rango (Sv)",
+            "Kerma aire (Gy/s)",
+            f"{self.combo_quality.get()} Patrón (Sv/h)",
+            f"{self.combo_quality.get()} Patrón (Sv)",
+            "Equipo (Sv/h)",
+            "Incertidumbre Tasa",
+            "Integrada (Sv)",
+            "Factor calibración (Tasa)",
+            "Incertidumbre Tasa (k=2)",
+            "Factor calibración (Integrada)",
+            "Incertidumbre Integrada (k=2)",
+            "Incertidumbre Kerma aire (k=2)",
+            "Incertidumbre magnitud de medida (k=2)"
+        ]
+        self.columns = [f'col{i+1}' for i in range(len(column_headers))]
+        self.tree['columns'] = self.columns
+
+        for i, header in enumerate(column_headers):
+            self.tree.heading(self.columns[i], text=header, anchor='w')
+            self.tree.column(self.columns[i], width=100, minwidth=50, anchor='w', stretch=tk.NO)
+
+    def check_mouse_position(self, event):
+        # Detectar si el cursor está sobre algún cabecero
+        region = self.tree.identify("region", event.x, event.y)
+        if region == "heading":
+            column = self.tree.identify_column(event.x)
+            idx = int(column.replace('#', '')) - 1
+            header = self.tree.heading(self.columns[idx])['text']
+            # Muestra el texto del cabecero en una etiqueta emergente
+            self.show_tooltip(header, event.x_root, event.y_root)
+
+    def show_tooltip(self, text, x, y):
+        # Destruye cualquier tooltip anterior
+        if hasattr(self, 'tooltip_window'):
+            self.tooltip_window.destroy()
+        # Crea una nueva ventana emergente como tooltip
+        self.tooltip_window = tk.Toplevel()
+        self.tooltip_window.wm_overrideredirect(True)
+        self.tooltip_window.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(self.tooltip_window, text=text, justify=tk.LEFT, background="yellow", relief=tk.SOLID, borderwidth=1, font=("tahoma", "8", "normal"))
+        label.pack()
+
+##### FRAME6 END
 
     def frame5_run(self, selection=None):
         self.running = False
@@ -429,7 +712,7 @@ class ir14dGUI(tk.Tk):
         self.port = selection if selection != "SIMU" else None
         self.running = True
         if selection == "SIMU":
-            self.simulate_data()
+            self.simulate_data_barom()
         else:
             if self.port:
                 self.measure_continuously()
@@ -443,12 +726,12 @@ class ir14dGUI(tk.Tk):
             if self.port:
                 self.measure_continuously_temp()            
 
-    def simulate_data(self):
+    def simulate_data_barom(self):
         if self.running:
             new_data = random.randint(93500, 94500)
             self.data_barom.append((datetime.datetime.now(), new_data))
             self.update_graph()  # Actualiza el gráfico después de añadir nuevos datos.
-            self.after(5000, self.simulate_data)  # Repite la simulación cada 5 segundos.
+            self.after(5000, self.simulate_data_barom)  # Repite la simulación cada 5 segundos.
 
     def simulate_data_temp(self):
         if self.running:
@@ -519,22 +802,16 @@ class ir14dGUI(tk.Tk):
             self.ax_temp.tick_params(axis='y', labelsize=5)
         self.canvas_temp.draw()     
 
-
-
 ##### START CALCULO FACTOR DE CORRECCIÓN POR DISTANCIA
-
     def on_fcdist_change(self, event):
-        if self.combo_fcdist_ref.get() == "Sí":
-            self.setup_initial_measurement_interface()
-        elif self.combo_fcdist_ref.get() == "No":
-            # Configura fcd_var a 1 y lo hace solo lectura
-            self.fcd_var.config(state='normal')  # Cambia el estado a normal para permitir la edición
-            self.fcd_var.delete(0, 'end')  # Elimina el contenido actual
-            self.fcd_var.insert(0, "1.00")  # Inserta el valor '1.00'
-            self.fcd_var.config(state='readonly')  # Vuelve a ponerlo como solo lectura
-            
-            # Llama al método calibration_mode
+        selection = self.combo_fcdist_ref.get()
+        if selection == "No":
+            self.fcd_var.set('1')
+            self.save_fcd_var(self.fcd_var.get())
             self.calibration_mode()
+        elif selection == "Sí":
+            self.fcd_var.set(str(self.setup_initial_measurement_interface()))     
+            self.save_fcd_var(self.fcd_var)
 
     def setup_initial_measurement_interface(self):
         self.frame3 = tk.Frame(self.frame_row1, borderwidth=2, relief="solid", bg='white')
@@ -543,20 +820,71 @@ class ir14dGUI(tk.Tk):
         self.label_title = tk.Label(self.frame3, text="Medidas del factor de corrección por distancia", bg='white', fg='black', font=('Arial', 16, 'bold'))
         self.label_title.grid(row=0, column=0, columnspan=4)
 
-        tk.Label(self.frame3, text="Tiempo (s)", font=('Arial', 8)).grid(row=1, column=0, sticky='w', padx=5)
-        self.entry_time = tk.Entry(self.frame3, font=('Arial', 8), width=15)
-        self.entry_time.grid(row=1, column=1, sticky='w', padx=5)
-        self.entry_time.insert(0, '60')
+        # Tiempo de irradiación
+        self.label_time_fcd = tk.Label(self.frame3, text="Tiempo (s)", font=('Arial', 8), bg='lightgray')
+        self.entry_time_fcd = tk.Entry(self.frame3, width=8, bg='#F8FEE4', validate="key", validatecommand=(self.register(self.validate_number), "%P"))
+        self.label_time_fcd.grid(row=1, column=0, sticky="w", padx=(10, 0))
+        self.entry_time_fcd.grid(row=1, column=1, sticky="e", padx=(0, 15))
+        self.entry_time_fcd.bind("<FocusOut>", self.save_and_check_time_entry)
 
-        tk.Label(self.frame3, text="Rango de Electrómetros", font=('Arial', 8)).grid(row=1, column=2, sticky='w', padx=5)
-        electrometer_range = ["LOW", "HIGH"]
-        self.combo_range = ttk.Combobox(self.frame3, values=electrometer_range, width=15, font=('Arial', 8))
-        self.combo_range.grid(row=1, column=3, sticky='w', padx=5)
-        self.combo_range.bind("<<ComboboxSelected>>", self.update_display_range)
+        # Intensidad de irradiación (oculto inicialmente)
+        self.label_fcd = tk.Label(self.frame3, text="Intensidad (A)", font=('Arial', 8), bg='lightgray')
+        self.entry_fcd = tk.Entry(self.frame3, width=8, bg='#F8FEE4', validate="key", validatecommand=(self.register(self.validate_number), "%P"))
+        self.label_fcd.grid(row=1, column=2, sticky="w", padx=(5, 0))
+        self.entry_fcd.grid(row=1, column=3, sticky="e", padx=(0, 15))
+        self.label_fcd.grid_remove()
+        self.entry_fcd.grid_remove()
+        self.entry_fcd.bind("<FocusOut>", self.save_and_check_intensity_entry)
 
-    def update_display_range(self, event):
+        # Rango del electrómetro (oculto inicialmente)     
+        self.label_combo_range_fcd = tk.Label(self.frame3, text="Rango de Electrómetros", font=('Arial', 8), bg='lightgray')
+        electrometer_range_fcd = ["LOW", "HIGH"]
+        self.combo_range_fcd = ttk.Combobox(self.frame3, values=electrometer_range_fcd, width=15, font=('Arial', 8))
+        self.label_combo_range_fcd.grid(row=1, column=4, sticky='w', padx=5)
+        self.combo_range_fcd.grid(row=1, column=5, sticky='w', padx=(0, 5))
+        self.label_combo_range_fcd.grid_remove()
+        self.combo_range_fcd.grid_remove()
+        self.combo_range_fcd.bind("<<ComboboxSelected>>", self.update_fcelec_var)
+
+    def save_and_check_time_entry(self, event):
+        self.save_entry_time_fcd(event)
+        if self.entry_time_fcd.get().strip():
+            print("Tiempo actualizado:", self.entry_time_fcd.get())  # Debug message
+            self.label_fcd.grid()
+            self.entry_fcd.grid()
+        pass
+
+    def save_and_check_intensity_entry(self, event):
+        self.save_entry_fcd(event)
+        if self.entry_fcd.get().strip():
+            print("Intensidad actualizada:", self.entry_fcd.get())  # Debug message
+            self.label_combo_range_fcd.grid()
+            self.combo_range_fcd.grid()
+        pass
+
+    def update_fcelec_var(self, event):
+        print("entroooooooooo")
+        print("self.combo_range_fcd.get()  1", self.combo_range_fcd.get()) 
+        # Obtener el valor seleccionado del ComboBox
+        selected_range_fcd = self.combo_range_fcd.get()
+        print("selected_range_fcd   ", selected_range_fcd)
+##### GUARDO DATOS FRAME 2: START 
+        self.combo_range_fcd.bind("<FocusOut>", self.save_combo_range_fcd)     
+        print("self.combo_range_fcd.get()  2", self.combo_range_fcd.get())  
+##### GUARDO DATOS FRAME 2: END  
+        # Actualizar la variable en función de la selección
+        if selected_range_fcd == "LOW HIHIHIHIHI":
+            self.fcelec_var.set("1.001")
+        elif selected_range_fcd == "HIGH sssssss":
+            self.fcelec_var.set("1.002")
+##### GUARDO DATOS FRAME 2: START 
+        self.save_felec_var(self.fcelec_var.get())       
+##### GUARDO DATOS FRAME 2: END
+        self.update_display_range()
+
+    def update_display_range(self):
         if not hasattr(self, 'start_button'):
-            self.start_button = tk.Button(self.frame3, text="Iniciar Mediciones de Corriente de fuga", bg='green', fg='#71FF33', command=lambda: self.perform_measurements(0))
+            self.start_button = tk.Button(self.frame3, text="Iniciar Mediciones de Corriente de fuga FCD", bg='green', fg='#71FF33', command=lambda: self.perform_measurements(0))
             self.start_button.grid(row=3, column=0, columnspan=4)
 
     def create_measurement_table(self, start_row):
@@ -571,27 +899,28 @@ class ir14dGUI(tk.Tk):
         return data_labels
 
     def perform_measurements(self, tanda):
-        # Incrementar el offset de inicio en función del número de tandas y de los elementos añadidos en cada tanda
         if tanda == 0:
-            start_row = 4  # Para la primera tanda, empieza en la fila 4
+            start_row = 4
         else:
-            # Aumentar el start_row según el número de tandas previas más el espacio para las filas de promedios, decisiones y una fila adicional
-            start_row = 4 + tanda * (5 + 5)  # 5 filas de medidas, 1 fila de promedio, 1 fila de desviación, 1 fila de decisiones y 1 fila adicional para separación
+            start_row = 4 + tanda * (5 + 5)
 
         description_texts = ["Medida de fugas", "Medidas a distancia lejana (m)", "Medidas a distancia cercana (m)"]
-        description_label = tk.Label(self.frame3, text=description_texts[tanda],
-                                    bg='black', fg='white', 
-                                    font=('Helvetica', 14, 'bold'))
-        description_label.grid(row=start_row, column=0, columnspan=7, sticky='wens')  # Ajustado para ocupar 6 columnas
+        description_label = tk.Label(self.frame3, text=description_texts[tanda], bg='black', fg='white', font=('Helvetica', 14, 'bold'))
+        description_label.grid(row=start_row, column=0, columnspan=2, sticky='wens')
 
-
-        # Introducción para "Medidas a distancia lejana"
-        if tanda == 1:
-            distant_entry = tk.Entry(self.frame3, font=('Arial', 8), width=10)
-            distant_entry.grid(row=start_row, column=5)
-        elif tanda == 2:
-            close_entry = tk.Entry(self.frame3, font=('Arial', 8), width=10)
-            close_entry.grid(row=start_row, column=5)
+        if tanda in [1, 2]:  # Only tanda 1 and 2 require distance inputs
+            if tanda == 1:
+                distance_label = tk.Label(self.frame3, text="Distancia lejana (m):", font=('Arial', 8))
+                distance_entry = tk.Entry(self.frame3, font=('Arial', 8), width=10)
+                distance_label.grid(row=start_row, column=3)
+                distance_entry.grid(row=start_row, column=4)
+                self.wait_for_entry(distance_entry)
+            elif tanda == 2:
+                close_label = tk.Label(self.frame3, text="Distancia corta (m):", font=('Arial', 8))
+                close_entry = tk.Entry(self.frame3, font=('Arial', 8), width=10)
+                close_label.grid(row=start_row, column=3)
+                close_entry.grid(row=start_row, column=4)
+                self.wait_for_entry(close_entry)
 
         labels = self.create_measurement_table(start_row)
         if len(self.data_labels) <= tanda:
@@ -604,14 +933,32 @@ class ir14dGUI(tk.Tk):
 
         self.simulate_data(tanda, start_row)
 
+    def wait_for_entry(self, entry_widget):
+        """
+        Utility function to wait for entry data before proceeding.
+        """
+        def on_entry_confirm(event):
+            self.entry_var.set(1)  # Set the variable to resume execution
+
+        self.entry_var = tk.IntVar()
+        entry_widget.bind("<Return>", on_entry_confirm)  # Bind the Return key to confirm entry
+        self.frame3.wait_variable(self.entry_var)  # Wait here until entry is confirmed
+
+
     def simulate_data(self, tanda, start_row):
         num_medidas = 5
+        # Ajustar rangos de carga según la tanda
+        if tanda == 0:
+            carga_min, carga_max = 1e-16, 1e-15
+        else:
+            carga_min, carga_max = 1e-10, 1e-11
+
         data = {
             "Presión (hPa)": np.random.normal(loc=1013, scale=5, size=num_medidas),
             "Temp. equipo (°C)": np.random.normal(loc=25, scale=1, size=num_medidas),
             "Temp. monitor (°C)": np.random.uniform(low=19, high=21, size=num_medidas),
-            "Carga equipo (nC)": np.random.normal(loc=10, scale=2, size=num_medidas),
-            "Carga monitor (nC)": np.random.normal(loc=10, scale=2, size=num_medidas)
+            "Carga equipo (nC)": np.random.uniform(low=carga_min, high=carga_max, size=num_medidas),
+            "Carga monitor (nC)": np.random.uniform(low=carga_min, high=carga_max, size=num_medidas)
         }
         df = pd.DataFrame(data)
 
@@ -621,38 +968,19 @@ class ir14dGUI(tk.Tk):
         df['Int. Equipo (A)'] = int_ppal_values
         df['Int. Monitor (A)'] = int_monitor_values
 
+        # Configurando el texto de cada celda con formato científico
         for row_index, (_, row) in enumerate(df.iterrows()):
             for col_index, value in enumerate(row):
-                self.data_labels[tanda][row_index][col_index].config(text=f"{value:.2f}")
+                self.data_labels[tanda][row_index][col_index].config(text=f"{value:.5e}")
 
-        # Calculate and display average and standard deviation for each column
+        # Calcular y mostrar promedio y desviación con formato científico
         for col_index, column_name in enumerate(df.columns):
             avg_value = np.mean(df[column_name])
             std_value = np.std(df[column_name])
-            if tanda == 1 or tanda == 2:
-                if column_name == "Int. Equipo (A)":
-                    setattr(self, f"avg_int_equipo_tanda_{tanda}", avg_value)
-                if column_name == "Int. Monitor (A)":
-                    setattr(self, f"avg_int_monitor_tanda_{tanda}", avg_value)
-            avg_label = tk.Label(self.frame3, text=f"Prom: {avg_value:.2f}", font=('Arial', 8), bg='lightyellow')
+            avg_label = tk.Label(self.frame3, text=f"Prom: {avg_value:.5e}", font=('Arial', 8), bg='lightyellow')
             avg_label.grid(row=start_row + num_medidas + 2, column=col_index, sticky='ew')
-
-            std_label = tk.Label(self.frame3, text=f"Desv: {std_value:.2f}", font=('Arial', 8), bg='lightyellow')
+            std_label = tk.Label(self.frame3, text=f"Desv: {std_value:.5e}", font=('Arial', 8), bg='lightyellow')
             std_label.grid(row=start_row + num_medidas + 3, column=col_index, sticky='ew')
-
-##### XANDRA START: Revisa este cálculo del FCD
-        if tanda == 2:  # Print the averages after the third tanda
-            print(f"Average Int. Equipo (A) in Tanda 2: {self.avg_int_equipo_tanda_1:.2f}")
-            print(f"Average Int. Monitor (A) in Tanda 2: {self.avg_int_monitor_tanda_1:.2f}")
-            print(f"Average Int. Equipo (A) in Tanda 3: {self.avg_int_equipo_tanda_2:.2f}")
-            print(f"Average Int. Monitor (A) in Tanda 3: {self.avg_int_monitor_tanda_2:.2f}")
-            # Calculate FCD value
-            fcd_value = (self.avg_int_equipo_tanda_1 * self.avg_int_monitor_tanda_2) / \
-                        (self.avg_int_equipo_tanda_2 * self.avg_int_monitor_tanda_1)
-            self.fcd_var = tk.Entry(self.frame2, width=12, state='readonly')  # Inicializa el Entry en modo solo lectura
-            self.fcd_var.insert(0, f"{fcd_value:.2f}")  # Inserta el valor formateado a dos decimales
-            self.fcd_var.grid(row=11, column=3, sticky="w", padx=5, pady=5)  # Ubica el Entry en la interfaz
-##### XANDRA END:
 
         decision_row = start_row + num_medidas + 4
         self.setup_next_tanda(decision_row, tanda)
@@ -661,9 +989,19 @@ class ir14dGUI(tk.Tk):
         options_label = tk.Label(self.frame3, text="Opciones posibles:", bg='#FFB233', font=('Arial', 10))
         options_label.grid(row=decision_row, column=0, sticky='w', padx=5)
         
-        # Adjusting options for tanda 2
         if tanda == 2:
             options = ["Reiniciar medidas", "Calculo del FCD y continuar"]
+            # Ensure that required attributes are not None before calculation
+            if self.avg_int_equipo_tanda_1 is not None and self.avg_int_monitor_tanda_2 is not None and \
+            self.avg_int_equipo_tanda_2 is not None and self.avg_int_monitor_tanda_1 is not None:
+                fcd_value = (self.avg_int_equipo_tanda_1 * self.avg_int_monitor_tanda_2) / \
+                            (self.avg_int_equipo_tanda_2 * self.avg_int_monitor_tanda_1)
+                self.fcd_var.set(f"{fcd_value:.2f}")
+                self.save_fcd_var(self.fcd_var)
+                self.frame6.grid()
+            else:
+                print("Required measurements are not available for FCD calculation")
+                # You may want to handle this situation differently, e.g., by disabling options or alerting the user
         else:
             options = ["Reiniciar medidas", "Continuar con las medidas"]
 
@@ -685,7 +1023,10 @@ class ir14dGUI(tk.Tk):
             # Clear frame3 contents
             for widget in self.frame3.winfo_children():
                 widget.destroy()
-            self.calibration_mode()
+            # Hide the custom table
+            
+            self.calibration_mode()  # Call a function to perform calibration
+
 
 ##### XANDRA_START: Estos cálculos de INTENSIDAD me los he inventado. Poner la clase verdadera
     def calculate_int_ppal(self, row):
@@ -722,42 +1063,48 @@ class ir14dGUI(tk.Tk):
             unitsunit = "Gy"
         self.label_rate.config(text=f"Unidades de tasa:   {unitsrate}")
         self.label_unit.config(text=f"Unidades:    {unitsunit}")
+##### GUARDO DATOS SERVICIO: START  
+        self.save_label_rate(unitsrate)      
+        self.save_label_unit(unitsunit)        
+##### GUARDO DATOS SERVICIO: END 
         pass
 
     def update_fields(self, event=None):
         # Mostrar los campos y el título cuando se actualicen o se llame a este método
-        self.title_label_frame2.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(10, 0))  # Mostrar el título con expansión a lo largo del eje horizontal
-
+        self.title_label_frame2.grid(row=0, column=0, columnspan=2, sticky="w")  # Mostrar el título con expansión a lo largo del eje horizontal
         # Configuración de las etiquetas y entradas usando grid
-        self.label_proc_ref.grid(row=1, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_proc_ref.grid(row=1, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
-        self.label_electrom_ref.grid(row=2, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_electrom_ref.grid(row=2, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
-        self.label_elecppal_com.grid(row=2, column=2, sticky="w", padx=5, pady=2)
-        self.elecppal_com_optionmenu.grid(row=2, column=3, sticky="w", padx=5, pady=2)
-        self.label_elecmonit_ref.grid(row=3, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_elecmonit_ref.grid(row=3, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
-        self.label_elecmonit_com.grid(row=3, column=2, sticky="w", padx=5, pady=2)
-        self.elecmonit_com_optionmenu.grid(row=3, column=3, sticky="w", padx=5, pady=2)
-        self.label_barom_ref.grid(row=4, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_barom_ref.grid(row=4, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
-        self.label_barom_com.grid(row=4, column=2, sticky="w", padx=5, pady=2)
-        self.barom_com_optionmenu.grid(row=4, column=3, sticky="w", padx=5, pady=2)
-        self.label_temp_ref.grid(row=5, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_temp_ref.grid(row=5, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
-        self.label_temp_com.grid(row=5, column=2, sticky="w", padx=5, pady=2)
-        self.temp_com_optionmenu.grid(row=5, column=3, sticky="w", padx=5, pady=2)
-        self.label_crono_ref.grid(row=6, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_crono_ref.grid(row=6, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
-        self.label_colim_ref.grid(row=7, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_colim_ref.grid(row=7, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
+        self.label_proc.grid(row=1, column=0, sticky="w", padx=(5, 0))  
+        self.combo_proc.grid(row=1, column=0, sticky="e", padx=(0, 5))  
+        self.label_electrom_ref.grid(row=2, column=0, sticky="w", padx=(5, 0))  
+        self.combo_electrom_ref.grid(row=2, column=0, sticky="e", padx=(0, 5))  
+        self.label_elecppal_com.grid(row=2, column=1, sticky="w", padx=(5, 0))
+        self.elecppal_com_optionmenu.grid(row=2, column=2, sticky="w", padx=(0, 5))
+        self.label_elecmonit_ref.grid(row=3, column=0, sticky="w", padx=(5, 0))  
+        self.combo_elecmonit_ref.grid(row=3, column=0, sticky="e", padx=(0, 5))  
+        self.label_elecmonit_com.grid(row=3, column=1, sticky="w", padx=(5, 0))
+        self.elecmonit_com_optionmenu.grid(row=3, column=2, sticky="w", padx=(0, 5))
+        self.label_barom_ref.grid(row=4, column=0, sticky="w", padx=(5, 0))  
+        self.combo_barom_ref.grid(row=4, column=0, sticky="e", padx=(0, 5))   
+        self.label_barom_com.grid(row=4, column=1, sticky="w", padx=(5, 0))
+        self.barom_com_optionmenu.grid(row=4, column=2, sticky="w", padx=(0, 5))
+        self.label_temp_ref.grid(row=5, column=0, sticky="w", padx=(5, 0))   
+        self.combo_temp_ref.grid(row=5, column=0, sticky="e", padx=(0, 5))  
+        self.label_temp_com.grid(row=5, column=1, sticky="w", padx=(5, 0))
+        self.temp_com_optionmenu.grid(row=5, column=2, sticky="w", padx=(0, 5))
+        self.label_crono_ref.grid(row=6, column=0, sticky="w", padx=(5, 0)) 
+        self.combo_crono_ref.grid(row=6, column=0, sticky="e", padx=(0, 5))
+        self.label_colim_ref.grid(row=7, column=0, sticky="w", padx=(5, 0))   
+        self.combo_colim_ref.grid(row=7, column=0, sticky="e", padx=(0, 5))  
         self.title2_label_frame2.grid(row=9, column=0, columnspan=2, sticky="w", pady=(10, 0)) 
-        self.label_dist_ref.grid(row=10, column=0, sticky="w", padx=5, pady=2)  # Etiqueta alineada a la derecha
-        self.entry_dist_ref.grid(row=10, column=1, sticky="w", padx=5, pady=2)  # Entrada alineada a la izquierda
-        self.label_fcdist_ref.grid(row=11, column=0, sticky="w", padx=5, pady=2)
-        self.combo_fcdist_ref.grid(row=11, column=1, sticky="w", padx=5, pady=2)
+        self.label_dist_ref.grid(row=10, column=0, sticky="w", padx=(5, 0)) 
+        self.entry_dist_ref.grid(row=10, column=0, sticky="e", padx=(0, 5)) 
+        self.label_fcdist_ref.grid(row=11, column=0, sticky="w", padx=(5, 0))
+        self.combo_fcdist_ref.grid(row=11, column=0, sticky="e", padx=(0, 5))
         self.fcd_label.grid(row=11, column=2, sticky="w", padx=5, pady=2)
-        self.fcd_var.grid(row=11, column=3, sticky="w", padx=5, pady=2)
+        self.fcd_value_label.grid(row=11, column=3, sticky="w", padx=5, pady=2)
+        self.fcelec_label.grid(row=12, column=0, sticky="w", padx=5, pady=2)
+        self.fcelec_value_label.grid(row=12, column=1, sticky="w", padx=5, pady=2)
+
 
     def fetch_correction_factor(self, event):
         try:
@@ -768,12 +1115,12 @@ class ir14dGUI(tk.Tk):
             print(f"Error al cargar el archivo: {e}")
             return  # Salir del método si la carga falla
 
-        # Obtener valores de calidad y medida de los comboboxes como texto
-        calidad = str(self.combo_quality.get())
-        medida = str(self.combo_units.get())  # Este será el nombre de la columna para la medida
+        # Limpiar los nombres de las columnas para eliminar posibles espacios extra
+        self.df.columns = [col.strip() for col in self.df.columns]
 
-        print(f"Calidad seleccionada como texto: {calidad}")
-        print(f"Medida seleccionada como texto: {medida}")
+        # Obtener valores de calidad y medida de los comboboxes como texto
+        calidad = str(self.combo_quality.get()).strip()
+        medida = str(self.combo_units.get()).strip()
 
         # Verificar que ambos campos están seleccionados
         if calidad and medida:
@@ -783,14 +1130,20 @@ class ir14dGUI(tk.Tk):
             if not filtered_df.empty and medida in filtered_df.columns:
                 # Extraer el factor de corrección para la calidad y medida seleccionada
                 correction_factor = filtered_df.iloc[0][medida]
-                # Asegurar que el separador decimal es un punto para procesarlo como float
-                if ',' in correction_factor:
-                    correction_factor = correction_factor.replace(',', '.')
+                # Asegurar que el valor es un número flotante y formatearlo a tres decimales
+                if isinstance(correction_factor, (int, float)):
+                    correction_factor_str = "{:.3f}".format(correction_factor)
+                else:
+                    # Intentar convertir y formatear en caso de que el valor sea una cadena
+                    try:
+                        correction_factor_str = "{:.3f}".format(float(correction_factor))
+                    except ValueError:
+                        correction_factor_str = correction_factor  # Usar valor original si la conversión falla
 
-                # Formatear el número como un string con dos decimales, manteniendo la coma como separador decimal
-                correction_factor_str = "{:.3f}".format(float(correction_factor)).replace('.', ',')
-                print(f"Coef Conversion: {correction_factor_str}")
                 self.correction_factor_var.set(correction_factor_str)  # Actualizar la variable de control con el nuevo valor
+##### GUARDO DATOS SERVICIO: START 
+                self.save_correction_factor(self.correction_factor_var)       
+##### GUARDO DATOS SERVICIO: END  
             else:
                 # Informar si no se encontraron combinaciones válidas
                 print("No se encontraron datos para la combinación de calidad y medida proporcionada.")
@@ -798,11 +1151,12 @@ class ir14dGUI(tk.Tk):
             # Avisar si alguno de los campos no está seleccionado
             print("Debe seleccionar una calidad y una medida para buscar el factor de corrección.")
 
+
+
+
     def update_values(self, event=None):
         quality = self.combo_quality.get()
         chamber = self.combo_chamber.get()
-        print(f"Calidad: {quality}")
-        print(f"Cámara: {chamber}")
 
         if quality and chamber:
             # Determinar el coeficiente basado en las condiciones dadas
@@ -816,10 +1170,13 @@ class ir14dGUI(tk.Tk):
                     self.calibration_coefficient_var.set('43080')
                 elif chamber == "NE 2575-ns506-IR14D/006":
                     self.calibration_coefficient_var.set('43150')
-        print(f"Coef Calibración: {self.calibration_coefficient_var.get()}")
+##### GUARDO DATOS SERVICIO: START 
+            self.save_calibration_coefficient(self.calibration_coefficient_var)   
+##### GUARDO DATOS SERVICIO: END 
+
 
     def on_entry_return(self, event):
-        nuevo_valor = self.entry.get()
+        nuevo_valor = self.entry.get()       
         self.actualizar_factor_correccion(nuevo_valor)
 
     def actualizar_factor_correccion(self, nuevo_valor):
@@ -833,24 +1190,51 @@ class ir14dGUI(tk.Tk):
         try:
             # Asegurarse de que 'value' es un flotante antes de formatear
             numeric_value = float(value)  # Intenta convertir el valor a float
-            formatted_value = f"{numeric_value:.3f}".replace('.', ',')  # Formatea y reemplaza el punto por una coma
+            formatted_value = f"{numeric_value:.3f}"
         except ValueError:
             # Si 'value' no puede convertirse a float, manejar como un caso especial
             formatted_value = "N/A"  # Mantener o asignar un valor por defecto que indica no disponible o no aplicable
 
         self.calibration_factor_var.set(formatted_value)  # Actualiza la variable de tkinter con el valor formateado
+##### GUARDO DATOS SERVICIO: START 
+        # self.save_calibration_factor(self.calibration_factor_var)     
+##### GUARDO DATOS SERVICIO: END 
+
+    def update_fcaa(self, event):
+        calidadfcaa = self.combo_quality.get()  # Obtener la calidad seleccionada
+
+        # Abrir y leer el archivo JSON
+        with open('CoefAtenAire.json', 'r') as file:
+            data_fcaa = json.load(file)
+
+        # Inicializar fcaa_var con un valor por defecto en caso de no encontrar una coincidencia
+        self.fcaa_var.set("Valor por defecto")
+
+        # Buscar en la lista de objetos el que coincide con la calidad seleccionada
+        for entry in data_fcaa:
+            if entry["Calidad"] == calidadfcaa:
+                self.fcaa_var.set(entry["Coef. Aten. aire"])  # Actualiza la variable de Tkinter con el valor
+##### GUARDO DATOS SERVICIO: START 
+                self.save_fcaa(self.fcaa_var.get())        
+##### GUARDO DATOS SERVICIO: END
+                pass
 
     def handle_quality_selected(self, event):
         self.fetch_correction_factor(event)
         self.update_values(event)
         self.update_calibration_factor(event)
-        # Cualquier otra función que necesite ser llamada cuando se selecciona un valor.
+        self.update_fcaa(event)
+        pass
 
     def handle_chamber_selected(self, event):
         self.fetch_correction_factor(event)
         self.update_values(event)
         self.update_calibration_factor(event)
+##### GUARDO DATOS SERVICIO: START 
+        self.save_calibration_factor(event)     
+##### GUARDO DATOS SERVICIO: END 
         self.update_fields(event)
+        pass
 
     def handle_final_decision(self, event):
         choice = self.decision_combo.get()
@@ -879,13 +1263,308 @@ class ir14dGUI(tk.Tk):
             self.new_start_button = tk.Button(self.frame3, text="Iniciar Nueva Tanda", bg='blue', fg='white', command=self.new_continue_measurements)
             self.new_start_button.grid(row=last_row_start + 1, column=0, columnspan=3)  # Mostrar botón para nuevas medidas
 
-
-
+##### START CALIBRACION EQUIPOS
     def calibration_mode(self):
         calibration_label = tk.Label(self.frame3, text="CALIBRACIÓN DEL EQUIPO", bg='white', fg='black', font=('Helvetica', 14, 'bold'))
         calibration_label.grid(row=0, column=0, columnspan=4, sticky='w', padx=5, pady=5)
+
+        self.frame3 = tk.Frame(self.frame_row1, borderwidth=2, relief="solid", bg='white')
+        self.frame3.grid(row=0, column=2, sticky='nsew', padx=5, pady=5)
+
+        # Tiempo de irradiación
+        self.label_time_patron = tk.Label(self.frame3, text="Tiempo (s)", font=('Arial', 8), bg='lightgray')
+        self.entry_time_patron = tk.Entry(self.frame3, width=8, bg='#F8FEE4', validate="key", validatecommand=(self.register(self.validate_number), "%P"))
+        self.label_time_patron.grid(row=1, column=0, sticky="w", padx=(10, 0))  # Etiqueta en la primera columna, alineada a la izquierda
+        self.entry_time_patron.grid(row=1, column=1, sticky="e", padx=(0, 15))
+##### GUARDO DATOS FRAME 2: START 
+        self.entry_time_patron.bind("<FocusOut>", self.save_entry_time_patron)       
+##### GUARDO DATOS FRAME 2: END        
+
+        # Intesidad de irradiación
+        self.label_Irx_patron = tk.Label(self.frame3, text="Intensidad (A)", font=('Arial', 8), bg='lightgray')
+        self.entry_Irx_patron = tk.Entry(self.frame3, width=8, bg='#F8FEE4', validate="key", validatecommand=(self.register(self.validate_number), "%P"))
+        self.label_Irx_patron.grid(row=1, column=2, sticky="w", padx=(5, 0))  # Etiqueta en la primera columna, alineada a la izquierda
+        self.entry_Irx_patron.grid(row=1, column=3, sticky="e", padx=(0, 15))
+##### GUARDO DATOS FRAME 2: START 
+        self.entry_Irx_patron.bind("<FocusOut>", self.save_entry_Irx_patron)       
+##### GUARDO DATOS FRAME 2: END        
+
+        # Rango del electrómetro
+        self.label_combo_range = tk.Label(self.frame3, text="Rango de Electrómetros", font=('Arial', 8), bg='lightgray').grid(row=1, column=4, sticky='w', padx=5)
+        electrometer_range = ["LOW", "HIGH"]
+        self.combo_range = ttk.Combobox(self.frame3, values=electrometer_range, width=15, font=('Arial', 8))
+        self.combo_range.grid(row=1, column=5, sticky='w', padx=(0, 5))
+        self.combo_range.bind("<<ComboboxSelected>>", self.on_select_patron)
+       
+
+    def on_select_patron(self, event):
+        # Evento que se dispara cuando se selecciona una opción en el Combobox
+        selected_range = self.combo_range.get()
+        # Actualizar la variable en función de la selección
+##### GUARDO DATOS FRAME 2: START 
+        self.combo_range.bind("<FocusOut>", self.save_combo_range_patron)       
+##### GUARDO DATOS FRAME 2: END        
+        if selected_range == "LOW":
+            self.fcelec_var.set("1.001")           
+        elif selected_range == "HIGH":
+            self.fcelec_var.set("1.002")
+
+##### GUARDO DATOS FRAME 2: START 
+        self.save_felec_var(self.fcelec_var.get())       
+##### GUARDO DATOS FRAME 2: END
+
+        self.update_display_range_patron()
+
+    def update_display_range_patron(self):
+        # if not hasattr(self, 'start_button'):
+        self.start_button = tk.Button(self.frame3, text="Iniciar Mediciones de Corriente de fuga", bg='green', fg='#71FF33', command=lambda: self.perform_measurements_patron(0))
+        self.start_button.grid(row=3, column=0, columnspan=4)
+
+    def perform_measurements_patron(self, tanda):
+        start_row = 4 if tanda == 0 else 4 + tanda * (5 + 5)
+
+        description_texts = ["Medida de fugas", "Medidas del equipo patrón", "Medidas del equipo del cliente"]
+        description_label = tk.Label(self.frame3, text=description_texts[tanda],
+                                    bg='black', fg='white', font=('Helvetica', 14, 'bold'))
+        description_label.grid(row=start_row, column=0, columnspan=7, sticky='wens')
+
+        labels = self.create_measurement_table_patron(start_row, tanda)
+
+        # Asegurarte de que self.data_labels tenga el tamaño adecuado
+        while len(self.data_labels) <= tanda:
+            self.data_labels.append([])
+
+        self.data_labels[tanda] = labels
+
+        if hasattr(self, 'start_button'):
+            self.start_button.grid_remove()
+
+        if tanda != 2:  # Para tanda 2, las mediciones se actualizarán manualmente
+            self.simulate_data_patron(tanda, start_row)
+
+    def create_measurement_table_patron(self, start_row, tanda):
+        headers = ["Presión (hPa)", "Temperatura (°C)", "Temp. monitor (°C)", "Carga Principal (nC)", "Carga Monitor (nC)", "Int. Equipo (A)", "Int. Monitor (A)"]
+        for i, header in enumerate(headers):
+            label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=15)
+            label.grid(row=start_row + 1, column=i, sticky='ew')
+
+        data_labels = [[tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=15) if tanda == 2 and i == 3 else tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=15)
+                        for i in range(len(headers))] for _ in range(5)]
+
+        for row_index, row in enumerate(data_labels):
+            for col_index, entry_or_label in enumerate(row):
+                entry_or_label.grid(row=start_row + row_index + 2, column=col_index, sticky='ew')
+                if isinstance(entry_or_label, tk.Entry):
+                    entry_or_label.bind("<Return>", lambda e, r=row_index: self.on_manual_charge_entry(e, start_row, r, tanda))
+
+        return data_labels   
+
+    def simulate_manual_data(self, charge_value, tanda):
+        pressure = np.random.normal(loc=1013, scale=5)  # Simular presión
+        temperature = np.random.normal(loc=25, scale=1)  # Simular temperatura del equipo
+        temp_monitor = np.random.uniform(low=19, high=21)  # Simular temperatura del monitor
+        charge_monitor = np.random.normal(loc=10, scale=2)  # Simular carga de monitor
+
+        # Usar tanda en los cálculos
+        int_equipo = self.calculate_int_ppal_patron({
+            "Presión (hPa)": pressure,
+            "Temp. equipo (°C)": temperature,
+            "Carga equipo (nC)": charge_value
+        }, tanda)
+
+        int_monitor = self.calculate_int_monitor_patron({
+            "Presión (hPa)": pressure,
+            "Temp. monitor (°C)": temp_monitor,
+            "Carga monitor (nC)": charge_monitor
+        }, tanda)
+
+        return {
+            "Presión (hPa)": pressure,
+            "Temperatura (°C)": temperature,
+            "Temp. monitor (°C)": temp_monitor,
+            "Carga monitor (nC)": charge_monitor,
+            "Carga equipo (nC)": charge_value,
+            "Int. Equipo (A)": int_equipo,
+            "Int. Monitor (A)": int_monitor
+        }
+
+    def update_data_labels_tanda_two(self, simulated_data, start_row, row_index, tanda):
+        row_labels = self.data_labels[tanda][row_index]
+        # Formatear y actualizar cada campo relevante
+        row_labels[0].config(text=f"{float(simulated_data['Presión (hPa)']):.5e}")
+        row_labels[1].config(text=f"{float(simulated_data['Temperatura (°C)']):.5e}")
+        row_labels[2].config(text=f"{float(simulated_data['Temp. monitor (°C)']):.5e}")
+        row_labels[3].config(text=f"{float(simulated_data['Carga equipo (nC)']):.5e}")  # Carga principal
+        row_labels[4].config(text=f"{float(simulated_data['Carga monitor (nC)']):.5e}")
+        row_labels[5].config(text=f"{float(simulated_data['Int. Equipo (A)']):.5e}")  # Intensidad del equipo
+        row_labels[6].config(text=f"{float(simulated_data['Int. Monitor (A)']):.5e}")  # Intensidad del monitor
+
+    def simulate_data_patron(self, tanda, start_row):
+        num_medidas = 5
+        data = {
+            "Presión (hPa)": [],
+            "Temp. equipo (°C)": [],
+            "Temp. monitor (°C)": [],
+            "Carga equipo (nC)": [],
+            "Carga monitor (nC)": []
+        }
+
+        # Generación de datos de prueba
+        for _ in range(num_medidas):
+            data["Presión (hPa)"].append(np.random.normal(loc=1013, scale=5))
+            data["Temp. equipo (°C)"].append(np.random.normal(loc=25, scale=1))
+            data["Temp. monitor (°C)"].append(np.random.uniform(low=19, high=21))
+            data["Carga equipo (nC)"].append(np.random.uniform(low=1e-16, high=1e-15) if tanda == 0 else np.random.uniform(low=1e-11, high=1e-10))
+            data["Carga monitor (nC)"].append(np.random.normal(loc=10, scale=2))
+
+        # Verificación de consistencia de longitud
+        length_check = len(set(len(lst) for lst in data.values())) == 1
+        if not length_check:
+            raise ValueError("Inconsistent data lengths in 'data' dictionary")
+
+        df = pd.DataFrame(data)
+        df['Int. Equipo (A)'] = [self.calculate_int_ppal_patron(row, tanda) for _, row in df.iterrows()]
+        df['Int. Monitor (A)'] = [self.calculate_int_monitor_patron(row, tanda) for _, row in df.iterrows()]
+
+        for row_index, (_, row) in enumerate(df.iterrows()):
+            for col_index, value in enumerate(row):
+                if col_index < 5:
+                    self.data_labels[tanda][row_index][col_index].config(text=f"{value:.5e}")
+                else:
+                    self.data_labels[tanda][row_index][col_index].config(text=f"{value:.5e}")
+
+        for col_index, column_name in enumerate(df.columns):
+            avg_value = np.mean(df[column_name])
+            std_value = np.std(df[column_name])
+            # Aplicar formato .5e a promedios y desviaciones
+            avg_label = tk.Label(self.frame3, text=f"Prom: {avg_value:.5e}", font=('Arial', 8), bg='lightyellow')
+            avg_label.grid(row=start_row + num_medidas + 2, column=col_index, sticky='ew')
+            std_label = tk.Label(self.frame3, text=f"Desv: {std_value:.5e}", font=('Arial', 8), bg='lightyellow')
+            std_label.grid(row=start_row + num_medidas + 3, column=col_index, sticky='ew')
+
+        if tanda == 0:
+            self.avg_int_ppal_patron_t0 = np.mean(df['Int. Equipo (A)'])
+            self.avg_int_monitor_t0 = np.mean(df['Int. Monitor (A)'])
+
+        decision_row = start_row + num_medidas + 4
+        self.setup_next_tanda_patron(decision_row, tanda)
+
+    def calculate_int_ppal_patron(self, row, tanda):
+        pressure = row["Presión (hPa)"]
+        temperature = row["Temp. equipo (°C)"]
+        charge_ppal = row["Carga equipo (nC)"]
+        time_seconds = float(self.entry_time_patron.get())  # Asegúrate de que esto sea convertido correctamente de la UI
+
+        if tanda == 0:
+            return (charge_ppal / time_seconds) * (101.325 / 293.15) * (273.15 + temperature) / pressure
+        else:
+            return ((charge_ppal / time_seconds) - self.avg_int_ppal_patron_t0) * (101.325 / 293.15) * (273.15 + temperature) / pressure
+
+    def calculate_int_monitor_patron(self, row, tanda):
+        pressure = row["Presión (hPa)"]
+        temp_monitor = row["Temp. monitor (°C)"]
+        charge_monitor = row["Carga monitor (nC)"]
+        time_seconds = float(self.entry_time_patron.get())
+
+        if tanda == 0:
+            return (charge_monitor / time_seconds) * (101.325 / 293.15) * (273.15 + temp_monitor) / pressure
+        else:
+            return ((charge_monitor / time_seconds) - self.avg_int_monitor_t0) * (101.325 / 293.15) * (273.15 + temp_monitor) / pressure
+
+    def setup_next_tanda_patron(self, decision_row, tanda):
+        options_label = tk.Label(self.frame3, text="Opciones posibles:", bg='#FFB233', font=('Arial', 10))
+        options_label.grid(row=decision_row, column=0, sticky='w', padx=5)
         
-   
+        options = ["Reiniciar medidas", "Continuar con las medidas"] if tanda != 2 else ["Reiniciar medidas", "Siguiente medida", "Fin de las medidas"]
+        decision_combo = ttk.Combobox(self.frame3, values=options, width=30)
+        decision_combo.grid(row=decision_row, column=1, columnspan=2, sticky='w')
+        decision_combo.bind("<<ComboboxSelected>>", lambda e: self.on_decision_made_patron(e, tanda))
+
+    def on_manual_charge_entry(self, event, start_row, row_index, tanda):
+        entry_widget = event.widget
+        charge_value = float(entry_widget.get())
+        entry_widget.config(state='readonly')
+
+        # Pasar también tanda como argumento
+        simulated_data = self.simulate_manual_data(charge_value, tanda)
+        self.update_data_labels_tanda_two(simulated_data, start_row, row_index, tanda)
+
+        # Formateo opcional y acciones adicionales si son necesarias
+        formatted_charge_value = format(charge_value, '.5e')
+        if tanda == 2 and row_index == 4:
+            self.simulate_data_patron(tanda, start_row)
+        elif row_index < 4:
+            next_entry = self.data_labels[tanda][row_index + 1][3]
+            next_entry.focus_set()
+
+    def on_decision_made_patron(self, event, tanda):
+        choice = event.widget.get()
+        if choice == "Reiniciar medidas":
+            # Clear all labels for the current tanda
+            for label_row in self.data_labels[tanda]:
+                for label in label_row:
+                    label.config(text="")
+            self.perform_measurements_patron(tanda)  # Restart measurements for the current tanda
+        elif choice == "Continuar con las medidas" and tanda == 1:
+            self.show_webcam_window()  # Show webcam window for tanda 1
+            self.perform_measurements_patron(tanda + 1)
+        elif choice == "Continuar con las medidas":
+            self.perform_measurements_patron(tanda + 1)  # Proceed to the next tanda        
+        elif choice == "Fin de las medidas" and tanda == 2:
+            # Perform any necessary finalization actions for tanda 2
+            pass
+        elif choice == "Calculo del FCD y continuar" and tanda == 2:
+            # Clear frame3 contents
+            for widget in self.frame3.winfo_children():
+                widget.destroy()
+            self.calibration_mode()  # Call a function to perform calibration
+        elif choice == "Siguiente medida":
+            # Make the table in frame6 visible
+            self.frame6.grid()
+
+    def show_webcam_window(self):
+        # Create a new top-level window
+        self.webcam_window = Toplevel(self.master)
+        self.webcam_window.geometry('400x400')
+        self.webcam_window.title('Captura de Imagen')
+
+        # Initialize the webcam
+        self.cap = cv2.VideoCapture(0)
+
+        # Create a label in the window to hold the webcam video
+        self.webcam_label = tk.Label(self.webcam_window)
+        self.webcam_label.pack()
+
+        # Button to capture the image
+        capture_button = tk.Button(self.webcam_window, text="Capturar Imagen", command=self.capture_image)
+        capture_button.pack()
+
+        # Start the video process
+        self.update_video()
+
+    def update_video(self):
+        # Capture frame-by-frame
+        ret, frame = self.cap.read()
+        if ret:
+            # Convert the image from BGR color (which OpenCV uses) to RGB color
+            cv_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            im = Image.fromarray(cv_rgb)
+            imgtk = ImageTk.PhotoImage(image=im)
+            self.webcam_label.imgtk = imgtk
+            self.webcam_label.configure(image=imgtk)
+        # Repeat after an interval to get the video frame
+        self.webcam_label.after(10, self.update_video)
+
+    def capture_image(self):
+        # Get the current frame from the webcam
+        ret, frame = self.cap.read()
+        if ret:
+            # Save the frame as an image file
+            cv2.imwrite("captura.jpg", frame)
+            print("Imagen capturada y guardada!")
+
+##### FIN CALCULO DEL FACTOR DE CORRECCION POR DISTANCIA
+
 
 def main():
     root = tk.Tk()
