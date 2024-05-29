@@ -1385,6 +1385,29 @@ class ir14dGUI(tk.Tk):
         self.start_button = tk.Button(self.frame3, text="Iniciar Mediciones de Corriente de fuga", bg='green', fg='#71FF33', command=lambda: self.perform_measurements_patron(0))
         self.start_button.grid(row=3, column=0, columnspan=4)
 
+    def perform_measurements_patron(self, tanda):
+        self.set_calibration_values()  # Asegúrate de que los valores estén configurados correctamente
+        start_row = 4 if tanda == 0 else 4 + tanda * (5 + 5)
+
+        description_texts = ["Medida de fugas", "Medidas del equipo patrón", "Medidas del equipo del cliente"]
+        description_label = tk.Label(self.frame3, text=description_texts[tanda],
+                                     bg='black', fg='white', font=('Helvetica', 14, 'bold'))
+        description_label.grid(row=start_row, column=0, columnspan=8, sticky='wens')
+
+        # Asegurarse de que self.data_labels tenga suficiente espacio
+        while len(self.data_labels) <= tanda:
+            self.data_labels.append([[] for _ in range(7)])
+
+        if tanda == 2:
+            self.create_measurement_table_tanda_two(start_row, tanda)
+        else:
+            labels = self.create_measurement_table_patron(start_row, tanda)
+            self.data_labels[tanda] = labels
+            if hasattr(self, 'start_button'):
+                self.start_button.grid_remove()
+            if tanda != 2:
+                self.simulate_data_patron(tanda, start_row)
+
     def set_calibration_values(self):
         try:
             self.calibration_coefficient = float(self.calibration_coefficient_var.get())
@@ -1393,29 +1416,218 @@ class ir14dGUI(tk.Tk):
         except ValueError as e:
             tk.messagebox.showerror("Error", f"Invalid calibration variables: {e}")
 
-    def perform_measurements_patron(self, tanda):
-        self.set_calibration_values()  # Asegúrate de que los valores estén configurados correctamente
-        start_row = 4 if tanda == 0 else 4 + tanda * (5 + 5)
+    def create_measurement_table_tanda_two(self, start_row, tanda):
+        headers = ["Tasa de fondo (Sv/h)", "Presión (kPa)", "Temperatura (C)", "Lectura equipo (Sv/h)", 
+                "Lectura corregida dosis (Sv/h)", "Tasa dosis integrada (Sv)", "Lectura corregida tasa"]
+        
+        # Inicializar self.data_labels[tanda] con listas vacías para cada columna
+        self.data_labels[tanda] = [[] for _ in range(len(headers))]
 
-        description_texts = ["Medida de fugas", "Medidas del equipo patrón", "Medidas del equipo del cliente"]
-        description_label = tk.Label(self.frame3, text=description_texts[tanda],
-                                    bg='black', fg='white', font=('Helvetica', 14, 'bold'))
-        description_label.grid(row=start_row, column=0, columnspan=8, sticky='wens')
+        # Añadir solo la columna "Tasa de fondo (Sv/h)" en la primera etapa
+        for col_index in range(1):
+            label = tk.Label(self.frame3, text=headers[col_index], font=('Arial', 10), bg='lightgrey', width=20)
+            label.grid(row=start_row + 1, column=col_index, sticky='ew')
+        
+        # Crear entradas para "Tasa de fondo (Sv/h)"
+        for row_index in range(5):
+            entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20)
+            entry.grid(row=start_row + row_index + 2, column=0, sticky='ew')
+            entry.bind("<Return>", lambda e, r=row_index: self.on_background_rate_entry(e, start_row, r, tanda))
+            self.data_labels[tanda][0].append(entry)
 
-        labels = self.create_measurement_table_patron(start_row, tanda)
+    def on_background_rate_entry(self, event, start_row, row_index, tanda):
+        entry_widget = event.widget
+        entry_widget.config(state='readonly')
 
-        # Asegurarte de que self.data_labels tenga el tamaño adecuado
-        while len(self.data_labels) <= tanda:
-            self.data_labels.append([])
+        # Check if all 5 measurements are entered
+        if all(self.data_labels[tanda][0][i].get() != "" for i in range(5)):
+            self.calculate_background_rate(start_row, tanda)
 
-        self.data_labels[tanda] = labels
+    def calculate_background_rate(self, start_row, tanda):
+        background_rates = [float(self.data_labels[tanda][0][i].get()) for i in range(5)]
+        avg_background_rate = np.mean(background_rates)
+        std_background_rate = np.std(background_rates)
 
-        if hasattr(self, 'start_button'):
-            self.start_button.grid_remove()
+        avg_label = tk.Label(self.frame3, text=f"Prom: {avg_background_rate:.5e}", font=('Arial', 8), bg='lightyellow')
+        avg_label.grid(row=start_row + 7, column=0, sticky='ew')
+        std_label = tk.Label(self.frame3, text=f"Desv: {std_background_rate:.5e}", font=('Arial', 8), bg='lightyellow')
+        std_label.grid(row=start_row + 8, column=0, sticky='ew')
 
-        if tanda != 2:  # Para tanda 2, las mediciones se actualizarán manualmente
-            self.simulate_data_patron(tanda, start_row)
+        self.background_rate = avg_background_rate
+        self.setup_next_columns(start_row, tanda, 1)
 
+    def setup_next_columns(self, start_row, tanda, stage):
+        if stage == 1:
+            # Añadir las columnas "Presión (kPa)", "Temperatura (C)", "Lectura equipo (Sv/h)", "Lectura corregida dosis (Sv/h)"
+            headers = ["Presión (kPa)", "Temperatura (C)", "Lectura equipo (Sv/h)", "Lectura corregida dosis (Sv/h)"]
+            start_col = 1  # Empezar desde la siguiente columna después de "Tasa de fondo (Sv/h)"
+
+            for i, header in enumerate(headers):
+                label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=20)
+                label.grid(row=start_row + 1, column=start_col + i, sticky='ew')
+
+            for row_index in range(5):
+                pressure_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+                temperature_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+                reading_entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20)
+                corrected_dose_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+
+                pressure_label.grid(row=start_row + row_index + 2, column=1, sticky='ew')
+                temperature_label.grid(row=start_row + row_index + 2, column=2, sticky='ew')
+                reading_entry.grid(row=start_row + row_index + 2, column=3, sticky='ew')
+                corrected_dose_label.grid(row=start_row + row_index + 2, column=4, sticky='ew')
+
+                reading_entry.bind("<Return>", lambda e, r=row_index: self.on_equipment_reading_entry(e, start_row, r, tanda))
+
+                self.data_labels[tanda][1].append(pressure_label)
+                self.data_labels[tanda][2].append(temperature_label)
+                self.data_labels[tanda][3].append(reading_entry)
+                self.data_labels[tanda][4].append(corrected_dose_label)
+
+            self.tanda_stage = 1  # Mover a la siguiente etapa
+        elif stage == 2:
+            # Añadir las columnas "Tasa dosis integrada (Sv)", "Lectura corregida tasa"
+            headers = ["Tasa dosis integrada (Sv)", "Lectura corregida tasa"]
+            start_col = 5  # Empezar desde la siguiente columna después de las existentes
+
+            for i, header in enumerate(headers):
+                label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=20)
+                label.grid(row=start_row + 1, column=start_col + i, sticky='ew')
+
+            for row_index in range(5):
+                integrated_dose_entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20)
+                corrected_rate_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+
+                integrated_dose_entry.grid(row=start_row + row_index + 2, column=5, sticky='ew')
+                corrected_rate_label.grid(row=start_row + row_index + 2, column=6, sticky='ew')
+
+                integrated_dose_entry.bind("<Return>", lambda e, r=row_index: self.on_integrated_dose_entry(e, start_row, r, tanda))
+
+                self.data_labels[tanda][5].append(integrated_dose_entry)
+                self.data_labels[tanda][6].append(corrected_rate_label)
+
+            self.tanda_stage = 2  # Mover a la etapa final
+
+    def on_equipment_reading_entry(self, event, start_row, row_index, tanda):
+        entry_widget = event.widget
+        entry_widget.config(state='readonly')
+
+        # Simulate pressure and temperature, calculate corrected dose
+        pressure = np.random.normal(loc=1013, scale=5)
+        temperature = np.random.normal(loc=25, scale=1)
+        equipment_reading = float(entry_widget.get())
+        corrected_dose = (equipment_reading - self.background_rate) * (101.325 / 293.15) * (273.15 + temperature) / pressure
+
+        self.data_labels[tanda][1][row_index].config(text=f"{pressure:.5e}")
+        self.data_labels[tanda][2][row_index].config(text=f"{temperature:.5e}")
+        self.data_labels[tanda][4][row_index].config(text=f"{corrected_dose:.5e}")
+
+        # Check if all 5 measurements are entered
+        if all(self.data_labels[tanda][3][i].get() != "" for i in range(5)):
+            self.calculate_corrected_doses(start_row, tanda)
+
+    def calculate_corrected_doses(self, start_row, tanda):
+        pressures = [float(self.data_labels[tanda][1][i].cget("text")) for i in range(5)]
+        temperatures = [float(self.data_labels[tanda][2][i].cget("text")) for i in range(5)]
+        readings = [float(self.data_labels[tanda][3][i].get()) for i in range(5)]
+        corrected_doses = [float(self.data_labels[tanda][4][i].cget("text")) for i in range(5)]
+
+        avg_pressure = np.mean(pressures)
+        std_pressure = np.std(pressures)
+        avg_temperature = np.mean(temperatures)
+        std_temperature = np.std(temperatures)
+        avg_reading = np.mean(readings)
+        std_reading = np.std(readings)
+        avg_corrected_dose = np.mean(corrected_doses)
+        std_corrected_dose = np.std(corrected_doses)
+
+        # Mostrar promedio y desviación de Presión
+        avg_label_pressure = tk.Label(self.frame3, text=f"Prom: {avg_pressure:.5e}", font=('Arial', 8), bg='lightyellow')
+        avg_label_pressure.grid(row=start_row + 7, column=1, sticky='ew')
+        std_label_pressure = tk.Label(self.frame3, text=f"Desv: {std_pressure:.5e}", font=('Arial', 8), bg='lightyellow')
+        std_label_pressure.grid(row=start_row + 8, column=1, sticky='ew')
+
+        # Mostrar promedio y desviación de Temperatura
+        avg_label_temperature = tk.Label(self.frame3, text=f"Prom: {avg_temperature:.5e}", font=('Arial', 8), bg='lightyellow')
+        avg_label_temperature.grid(row=start_row + 7, column=2, sticky='ew')
+        std_label_temperature = tk.Label(self.frame3, text=f"Desv: {std_temperature:.5e}", font=('Arial', 8), bg='lightyellow')
+        std_label_temperature.grid(row=start_row + 8, column=2, sticky='ew')
+
+        # Mostrar promedio y desviación de Lectura equipo (Sv/h)
+        avg_label_reading = tk.Label(self.frame3, text=f"Prom: {avg_reading:.5e}", font=('Arial', 8), bg='lightyellow')
+        avg_label_reading.grid(row=start_row + 7, column=3, sticky='ew')
+        std_label_reading = tk.Label(self.frame3, text=f"Desv: {std_reading:.5e}", font=('Arial', 8), bg='lightyellow')
+        std_label_reading.grid(row=start_row + 8, column=3, sticky='ew')
+
+        # Mostrar promedio y desviación de Lectura corregida dosis (Sv/h)
+        avg_label_corrected_dose = tk.Label(self.frame3, text=f"Prom: {avg_corrected_dose:.5e}", font=('Arial', 8), bg='lightyellow')
+        avg_label_corrected_dose.grid(row=start_row + 7, column=4, sticky='ew')
+        std_label_corrected_dose = tk.Label(self.frame3, text=f"Desv: {std_corrected_dose:.5e}", font=('Arial', 8), bg='lightyellow')
+        std_label_corrected_dose.grid(row=start_row + 8, column=4, sticky='ew')
+
+        self.avg_pressure = avg_pressure
+        self.avg_temperature = avg_temperature
+        self.setup_next_columns(start_row, tanda, 2)
+
+
+    def setup_final_columns(self, start_row, tanda):
+        # Remove previous entries
+        for row in self.data_labels[tanda]:
+            for widget in row:
+                widget.grid_remove()
+
+        # Set up final columns
+        headers = ["Tasa dosis integrada (Sv)", "Lectura corregida tasa"]
+        for i, header in enumerate(headers):
+            label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=20)
+            label.grid(row=start_row + 1, column=i, sticky='ew')
+        
+        self.data_labels[tanda] = [[tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20) if i == 0 else tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+                                    for i in range(len(headers))] for _ in range(5)]
+        
+        for row_index, row in enumerate(self.data_labels[tanda]):
+            for col_index, widget in enumerate(row):
+                widget.grid(row=start_row + row_index + 2, column=col_index, sticky='ew')
+                if isinstance(widget, tk.Entry):
+                    widget.bind("<Return>", lambda e, r=row_index: self.on_integrated_dose_entry(e, start_row, r, tanda))
+        
+        self.tanda_stage = 2  # Move to final stage
+
+    def on_integrated_dose_entry(self, event, start_row, row_index, tanda):
+        entry_widget = event.widget
+        entry_widget.config(state='readonly')
+
+        integrated_dose = float(entry_widget.get())
+        corrected_rate = (integrated_dose * 101.325 / self.avg_pressure * (273.15 + self.avg_temperature) / 293.15 -
+                        self.background_rate) / 3600 * float(self.entry_time_patron.get()) * 5
+
+        self.data_labels[tanda][6][row_index].config(text=f"{corrected_rate:.5e}")
+
+        # Check if all 5 measurements are entered
+        if all(self.data_labels[tanda][6][i].cget("text") != "" for i in range(5)):
+            self.calculate_final_results(start_row, tanda)
+
+    def calculate_final_results(self, start_row, tanda):
+        integrated_doses = [float(self.data_labels[tanda][5][i].get()) for i in range(5)]
+        corrected_rates = [float(self.data_labels[tanda][6][i].cget("text")) for i in range(5)]
+
+        avg_integrated_dose = np.mean(integrated_doses)
+        std_integrated_dose = np.std(integrated_doses)
+        avg_corrected_rate = np.mean(corrected_rates)
+        std_corrected_rate = np.std(corrected_rates)
+
+        avg_label_integrated_dose = tk.Label(self.frame3, text=f"Prom: {avg_integrated_dose:.5e}", font=('Arial', 8), bg='lightyellow')
+        avg_label_integrated_dose.grid(row=start_row + 7, column=5, sticky='ew')
+        std_label_integrated_dose = tk.Label(self.frame3, text=f"Desv: {std_integrated_dose:.5e}", font=('Arial', 8), bg='lightyellow')
+        std_label_integrated_dose.grid(row=start_row + 8, column=5, sticky='ew')
+
+        avg_label_corrected_rate = tk.Label(self.frame3, text=f"Prom: {avg_corrected_rate:.5e}", font=('Arial', 8), bg='lightyellow')
+        avg_label_corrected_rate.grid(row=start_row + 7, column=6, sticky='ew')
+        std_label_corrected_rate = tk.Label(self.frame3, text=f"Desv: {std_corrected_rate:.5e}", font=('Arial', 8), bg='lightyellow')
+        std_label_corrected_rate.grid(row=start_row + 8, column=6, sticky='ew')
+
+        # Finalize and move to next step if needed
+        self.setup_next_tanda_patron(start_row + 9, tanda)
 
     def create_measurement_table_patron(self, start_row, tanda):
         headers = ["Presión (kPa)", "Temperatura (°C)", "Temp. monitor (°C)", "Carga Principal (nC)", "Carga Monitor (nC)", "Int. Equipo (A)", "Int. Monitor (A)"]
@@ -1436,8 +1648,7 @@ class ir14dGUI(tk.Tk):
                     entry_or_label.bind("<Return>", lambda e, r=row_index: self.on_manual_charge_entry(e, start_row, r, tanda))
 
         return data_labels 
-  
-
+    
     def simulate_manual_data(self, charge_value, tanda):
         pressure = np.random.normal(loc=1013, scale=5)  # Simular presión
         temperature = np.random.normal(loc=25, scale=1)  # Simular temperatura del equipo
@@ -1554,8 +1765,6 @@ class ir14dGUI(tk.Tk):
         decision_row = start_row + num_medidas + 4
         self.setup_next_tanda_patron(decision_row, tanda)
 
-
-
     def calculate_int_ppal_patron(self, row, tanda):
         pressure = row["Presión (kPa)"]
         temperature = row["Temp. equipo (°C)"]
@@ -1640,23 +1849,28 @@ class ir14dGUI(tk.Tk):
             for tanda_num in range(3):  # Suponiendo que hay 3 tandas
                 tanda_data = []
                 for row in self.data_labels[tanda_num]:
-                    row_data = [label.cget("text") for label in row]
+                    row_data = [label.cget("text") if isinstance(label, tk.Label) else label.get() for label in row]
                     tanda_data.append(row_data)
                 self.datamed[measure_num].append(tanda_data)
 
+            # Guardar datos iniciales en self.datamed
+            initial_data = {
+                "Tiempo": self.entry_time_patron.get(),
+                "Intensidad": self.entry_Irx_patron.get(),
+                "Rango": self.combo_range.get()
+            }
+            self.datamed[measure_num].append(initial_data)
+
             # Calcular los valores promedio de Kair, Int. Equipo y monitor de las tablas 1, 2 y 3
             avg_kair_tanda2 = np.mean([float(self.data_labels[1][i][7].cget("text")) for i in range(5)])
-            avg_kair_tanda3 = np.mean([float(self.data_labels[2][i][7].cget("text")) for i in range(5)])
 
             avg_int_equipo_tanda1 = np.mean([float(self.data_labels[0][i][5].cget("text")) for i in range(5)])
             avg_int_monitor_tanda1 = np.mean([float(self.data_labels[0][i][6].cget("text")) for i in range(5)])
             avg_int_equipo_tanda2 = np.mean([float(self.data_labels[1][i][5].cget("text")) for i in range(5)])
             avg_int_monitor_tanda2 = np.mean([float(self.data_labels[1][i][6].cget("text")) for i in range(5)])
-            avg_int_equipo_tanda3 = np.mean([float(self.data_labels[2][i][5].cget("text")) for i in range(5)])
-            avg_int_monitor_tanda3 = np.mean([float(self.data_labels[2][i][6].cget("text")) for i in range(5)])
+
 
             print(f"Valor promedio de Kair de las tablas 2: {avg_kair_tanda2:.5e}")
-            print(f"Valor promedio de Kair de las tablas 3: {avg_kair_tanda3:.5e}")
             print(f"Valor de self.fcaa_var: {self.fcaa_var.get()}")
             print(f"Valor de self.correction_factor_var: {self.correction_factor_var.get()}")
             print(f"Valor de self.fcd_var: {self.fcd_var.get()}")
@@ -1665,11 +1879,7 @@ class ir14dGUI(tk.Tk):
             print(f"Valor promedio de Int. Monitor tabla 1: {avg_int_monitor_tanda1:.5e}")
             print(f"Valor promedio de Int. Equipo tabla 2: {avg_int_equipo_tanda2:.5e}")
             print(f"Valor promedio de Int. Monitor tabla 2: {avg_int_monitor_tanda2:.5e}")
-            print(f"Valor promedio de Int. Equipo tabla 3: {avg_int_equipo_tanda3:.5e}")
-            print(f"Valor promedio de Int. Monitor tabla 3: {avg_int_monitor_tanda3:.5e}")
-
-            
-            self.calculo_tabla_final()
+            self.calculo_tabla_final(avg_kair_tanda2, avg_int_equipo_tanda2)
 
             # Reiniciar para la siguiente medida
             for widget in self.frame3.winfo_children():
@@ -1683,78 +1893,36 @@ class ir14dGUI(tk.Tk):
 
         print(self.datamed)
 
-    def calculo_tabla_final(self):
-         # Calcular los valores necesarios
-        avg_kair_tanda2 = np.mean([float(self.data_labels[1][i][7].cget("text")) for i in range(5)])
-        avg_kair_tanda3 = np.mean([float(self.data_labels[2][i][7].cget("text")) for i in range(5)])
+    def calculo_tabla_final(self, avg_kair_tanda2, avg_int_equipo_tanda2):
+        try:
+            kerma_aire = float(avg_kair_tanda2)
+            fcaa_var_value = float(self.fcaa_var.get())
+            correction_factor = float(self.correction_factor_var.get())
+            fcd_value = float(self.fcd_var.get())
 
-        avg_int_equipo_tanda1 = np.mean([float(self.data_labels[0][i][5].cget("text")) for i in range(5)])
-        avg_int_monitor_tanda1 = np.mean([float(self.data_labels[0][i][6].cget("text")) for i in range(5)])
-        avg_int_equipo_tanda2 = np.mean([float(self.data_labels[1][i][5].cget("text")) for i in range(5)])
-        avg_int_monitor_tanda2 = np.mean([float(self.data_labels[1][i][6].cget("text")) for i in range(5)])
-        avg_int_equipo_tanda3 = np.mean([float(self.data_labels[2][i][5].cget("text")) for i in range(5)])
-        avg_int_monitor_tanda3 = np.mean([float(self.data_labels[2][i][6].cget("text")) for i in range(5)])
+            patron_sv_h = kerma_aire * fcaa_var_value * correction_factor * fcd_value
+            patron_sv = patron_sv_h * 5 * float(self.entry_time_patron.get())
+            equipo_sv_h = avg_int_equipo_tanda2
+            incert_tasa = "2.1%"
+            integrada_sv = "some value"
+            factor_cal_tasa = "some_value"
+            incert_tasa_k2 = "some_value"
+            factor_cal_integrada = "some_value"
+            incert_integrada_k2 = "some_value"
+            incert_kerma_aire_k2 = "some_value"
+            incert_magnitud_medida_k2 = "some_value"
 
-        fcd_value = (avg_int_equipo_tanda1 * avg_int_monitor_tanda2) / (avg_int_equipo_tanda2 * avg_int_monitor_tanda1)
-        self.fcd_var.set(f"{fcd_value:.4f}")
-        self.save_fcd_var(self.fcd_var)
+            treeview_values = [
+                "Sv", kerma_aire, patron_sv, equipo_sv_h, incert_tasa,
+                integrada_sv, factor_cal_tasa, incert_tasa_k2, factor_cal_integrada,
+                incert_integrada_k2, incert_kerma_aire_k2, incert_magnitud_medida_k2
+            ]
 
-        # Supongamos que los valores para el treeview ya se calcularon
+            self.tree.insert("", "end", values=treeview_values)
+            self.frame6.grid()
+        except ValueError as e:
+            tk.messagebox.showerror("Error", f"Invalid numeric value: {e}")
 
-        kerma_aire = avg_kair_tanda2  # Un ejemplo de cómo se podría usar el promedio
-        fcaa_var_value = float(self.fcaa_var.get())
-
-        pt1_w = np.mean([float(self.data_labels[1][i][0].cget("text")) for i in range(5)])
-        tt1_w = np.mean([float(self.data_labels[1][i][1].cget("text")) for i in range(5)])
-
-        # Ahora puedes usar estos valores en el cálculo
-        fcaa_mat = math.exp(fcaa_var_value * 0.001293 * pt1_w / tt1_w * (273.15 / 101.25))
-
-        # Asegúrate de que los valores obtenidos de correction_factor_var y fcd_var sean floats
-        correction_factor = float(self.correction_factor_var.get())
-        fcd_value = float(self.fcd_var.get())
-
-        # Verifica que avg_kair_tanda2 sea numérico
-        avg_kair_tanda2 = float(avg_kair_tanda2)
-
-        # Realiza el cálculo
-        patron_sv_h_calc = avg_kair_tanda2 * fcaa_mat * correction_factor * fcd_value
-        patron_sv_h = patron_sv_h_calc  
-        if 0 <= patron_sv_h <= 100:
-            rango_sv = "Sv"
-        elif 1e-3 <= patron_sv_h < 1:
-            rango_sv = "mili Sv"
-        elif 1e-6 <= patron_sv_h < 1e-3:
-            rango_sv = "micro Sv"
-        elif 1e-9 <= patron_sv_h < 1e-6:
-            rango_sv = "nano Sv"
-        elif 1e-12 <= patron_sv_h < 1e-9:
-            rango_sv = "pico Sv"
-        elif 1e-15 <= patron_sv_h < 1e-12:
-            rango_sv = "femto Sv"
-        else:
-            rango_sv = "Fuera de rango"
-        patron_sv = avg_int_monitor_tanda1 * 5 * self.entry_time_patron.get() 
-        equipo_sv_h = avg_int_equipo_tanda2 
-        incert_tasa = "some_value"  # Calcula esto
-        integrada_sv = avg_int_monitor_tanda2  # Ajusta esto de acuerdo a tus cálculos reales
-        factor_cal_tasa = "some_value"  # Calcula esto
-        incert_tasa_k2 = "some_value"  # Calcula esto
-        factor_cal_integrada = "some_value"  # Calcula esto
-        incert_integrada_k2 = "some_value"  # Calcula esto
-        incert_kerma_aire_k2 = "some_value"  # Calcula esto
-        incert_magnitud_medida_k2 = "some_value"  # Calcula esto
-
-        # Crear una lista con los valores para cada fila del treeview
-        treeview_values = [
-            rango_sv, kerma_aire, patron_sv_h, patron_sv, equipo_sv_h, incert_tasa,
-            integrada_sv, factor_cal_tasa, incert_tasa_k2, factor_cal_integrada,
-            incert_integrada_k2, incert_kerma_aire_k2, incert_magnitud_medida_k2
-        ]
-
-        # Insertar los valores en el treeview
-        self.tree.insert("", "end", values=treeview_values)
-        self.frame6.grid()
 
     def show_webcam_window(self):
         # Create a new top-level window
