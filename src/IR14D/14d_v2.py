@@ -32,10 +32,12 @@ print("Cargando el programa al 75%...")
 import time
 import datetime
 import random
+from docx import Document
 print("Cargando el programa al 90%...")
 import math
 import cv2
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageGrab
+import subprocess
 print("PROGRAMA EN EJECUCIÓN")
 
 
@@ -61,6 +63,7 @@ class ir14dGUI(tk.Tk):
         self.avg_int_equipo_tanda_2 = None
         self.avg_int_monitor_tanda_1 = None
         self.avg_int_monitor_tanda_2 = None
+        self.last_filled_index = -1
         self.fcd_var = tk.DoubleVar()
         self.fcd_var.set(1.0000)
         self.combo_fcdist_ref = None
@@ -1425,12 +1428,12 @@ class ir14dGUI(tk.Tk):
 
         # Añadir solo la columna "Tasa de fondo (Sv/h)" en la primera etapa
         for col_index in range(1):
-            label = tk.Label(self.frame3, text=headers[col_index], font=('Arial', 10), bg='lightgrey', width=20)
+            label = tk.Label(self.frame3, text=headers[col_index], font=('Arial', 10), bg='lightgrey', width=10)
             label.grid(row=start_row + 1, column=col_index, sticky='ew')
         
         # Crear entradas para "Tasa de fondo (Sv/h)"
         for row_index in range(5):
-            entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20)
+            entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=10)
             entry.grid(row=start_row + row_index + 2, column=0, sticky='ew')
             entry.bind("<Return>", lambda e, r=row_index: self.on_background_rate_entry(e, start_row, r, tanda))
             self.data_labels[tanda][0].append(entry)
@@ -1463,14 +1466,14 @@ class ir14dGUI(tk.Tk):
             start_col = 1  # Empezar desde la siguiente columna después de "Tasa de fondo (Sv/h)"
 
             for i, header in enumerate(headers):
-                label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=20)
+                label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=10)
                 label.grid(row=start_row + 1, column=start_col + i, sticky='ew')
 
             for row_index in range(5):
-                pressure_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
-                temperature_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
-                reading_entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20)
-                corrected_dose_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+                pressure_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=10)
+                temperature_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=10)
+                reading_entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=10)
+                corrected_dose_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=10)
 
                 pressure_label.grid(row=start_row + row_index + 2, column=1, sticky='ew')
                 temperature_label.grid(row=start_row + row_index + 2, column=2, sticky='ew')
@@ -1491,12 +1494,12 @@ class ir14dGUI(tk.Tk):
             start_col = 5  # Empezar desde la siguiente columna después de las existentes
 
             for i, header in enumerate(headers):
-                label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=20)
+                label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=10)
                 label.grid(row=start_row + 1, column=start_col + i, sticky='ew')
 
             for row_index in range(5):
-                integrated_dose_entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20)
-                corrected_rate_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+                integrated_dose_entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=10)
+                corrected_rate_label = tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=10)
 
                 integrated_dose_entry.grid(row=start_row + row_index + 2, column=5, sticky='ew')
                 corrected_rate_label.grid(row=start_row + row_index + 2, column=6, sticky='ew')
@@ -1579,10 +1582,10 @@ class ir14dGUI(tk.Tk):
         # Set up final columns
         headers = ["Tasa dosis integrada (Sv)", "Lectura corregida tasa"]
         for i, header in enumerate(headers):
-            label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=20)
+            label = tk.Label(self.frame3, text=header, font=('Arial', 10), bg='lightgrey', width=10)
             label.grid(row=start_row + 1, column=i, sticky='ew')
         
-        self.data_labels[tanda] = [[tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=20) if i == 0 else tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=20)
+        self.data_labels[tanda] = [[tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=10) if i == 0 else tk.Label(self.frame3, text="", font=('Arial', 8), bg='white', width=10)
                                     for i in range(len(headers))] for _ in range(5)]
         
         for row_index, row in enumerate(self.data_labels[tanda]):
@@ -1606,6 +1609,7 @@ class ir14dGUI(tk.Tk):
         # Check if all 5 measurements are entered
         if all(self.data_labels[tanda][6][i].cget("text") != "" for i in range(5)):
             self.calculate_final_results(start_row, tanda)
+
 
     def calculate_final_results(self, start_row, tanda):
         integrated_doses = [float(self.data_labels[tanda][5][i].get()) for i in range(5)]
@@ -1648,6 +1652,25 @@ class ir14dGUI(tk.Tk):
                     entry_or_label.bind("<Return>", lambda e, r=row_index: self.on_manual_charge_entry(e, start_row, r, tanda))
 
         return data_labels 
+
+    def create_measurement_table_tanda_two(self, start_row, tanda):
+        headers = ["Tasa de fondo (Sv/h)", "Presión (kPa)", "Temperatura (C)", "Lectura equipo (Sv/h)", 
+                "Lectura corregida dosis (Sv/h)", "Tasa dosis integrada (Sv)", "Lectura corregida tasa"]
+        
+        # Inicializar self.data_labels[tanda] con listas vacías para cada columna
+        self.data_labels[tanda] = [[] for _ in range(len(headers))]
+
+        # Añadir solo la columna "Tasa de fondo (Sv/h)" en la primera etapa
+        for col_index in range(1):
+            label = tk.Label(self.frame3, text=headers[col_index], font=('Arial', 10), bg='lightgrey', width=10)
+            label.grid(row=start_row + 1, column=col_index, sticky='ew')
+        
+        # Crear entradas para "Tasa de fondo (Sv/h)"
+        for row_index in range(5):
+            entry = tk.Entry(self.frame3, font=('Arial', 8), bg='white', width=10)
+            entry.grid(row=start_row + row_index + 2, column=0, sticky='ew')
+            entry.bind("<Return>", lambda e, r=row_index: self.on_background_rate_entry(e, start_row, r, tanda))
+            self.data_labels[tanda][0].append(entry)
     
     def simulate_manual_data(self, charge_value, tanda):
         pressure = np.random.normal(loc=1013, scale=5)  # Simular presión
@@ -1839,7 +1862,67 @@ class ir14dGUI(tk.Tk):
         elif choice == "Continuar con las medidas":
             self.perform_measurements_patron(tanda + 1)
         elif choice == "Fin de las medidas" and tanda == 2:
-            pass
+            # Recopilar datos y guardarlos en el diccionario
+            measure_num = self.measure_var.get()
+            if measure_num not in self.datamed:
+                self.datamed[measure_num] = []
+
+            for tanda_num in range(3):  # Suponiendo que hay 3 tandas
+                tanda_data = []
+                for row in self.data_labels[tanda_num]:
+                    row_data = [label.cget("text") if isinstance(label, tk.Label) else label.get() for label in row]
+                    tanda_data.append(row_data)
+                self.datamed[measure_num].append(tanda_data)
+
+            # Guardar datos iniciales en self.datamed
+            initial_data = {
+                "Tiempo": self.entry_time_patron.get(),
+                "Intensidad": self.entry_Irx_patron.get(),
+                "Rango": self.combo_range.get()
+            }
+            self.datamed[measure_num].append(initial_data)
+
+            # Calcular los valores promedio de Kair, Int. Equipo y monitor de las tablas 1, 2 y 3
+            avg_kair_tanda2 = np.mean([float(self.data_labels[1][i][7].cget("text")) for i in range(5)])
+
+            avg_int_equipo_tanda1 = np.mean([float(self.data_labels[0][i][5].cget("text")) for i in range(5)])
+            avg_int_monitor_tanda1 = np.mean([float(self.data_labels[0][i][6].cget("text")) for i in range(5)])
+            avg_int_equipo_tanda2 = np.mean([float(self.data_labels[1][i][5].cget("text")) for i in range(5)])
+            avg_int_monitor_tanda2 = np.mean([float(self.data_labels[1][i][6].cget("text")) for i in range(5)])
+
+            print(f"Valor promedio de Kair de las tablas 2: {avg_kair_tanda2:.5e}")
+            print(f"Valor de self.fcaa_var: {self.fcaa_var.get()}")
+            print(f"Valor de self.correction_factor_var: {self.correction_factor_var.get()}")
+            print(f"Valor de self.fcd_var: {self.fcd_var.get()}")
+
+            print(f"Valor promedio de Int. Equipo tabla 1: {avg_int_equipo_tanda1:.5e}")
+            print(f"Valor promedio de Int. Monitor tabla 1: {avg_int_monitor_tanda1:.5e}")
+            print(f"Valor promedio de Int. Equipo tabla 2: {avg_int_equipo_tanda2:.5e}")
+            print(f"Valor promedio de Int. Monitor tabla 2: {avg_int_monitor_tanda2:.5e}")
+            self.calculo_tabla_final(avg_kair_tanda2, avg_int_equipo_tanda2)
+
+            # Reiniciar para la siguiente medida
+            for widget in self.frame3.winfo_children():
+                widget.destroy()
+            self.measure_var.set(self.measure_var.get() + 1)
+            if self.measure_var.get() > 4:
+                self.measure_var.set(1)
+            # Crear y mostrar los botones
+            img1 = Image.open("image1.png")
+            img1_resized = img1.resize((170, 170))  # Cambia el tamaño a 1cm x 1cm
+            self.img1_tk = ImageTk.PhotoImage(img1_resized)
+            img2 = Image.open("image2.png")
+            img2_resized = img2.resize((170, 170))  # Cambia el tamaño a 1cm x 1cm
+            self.img2_tk = ImageTk.PhotoImage(img2_resized)
+            # Crea los botones con las imágenes y los comandos
+            self.button1f2 = tk.Button(self.frame3, image=self.img1_tk, command=self.method1)
+            self.button1f2.grid(row=10, column=0)  # Coloca el botón en la fila 14, columna 1
+            self.label_b1f2 = tk.Label(self.frame3, text="Certificado", bg='white', fg='black', font=("Arial", 18))
+            self.label_b1f2.grid(row=11, column=0)
+            self.button2f2 = tk.Button(self.frame3, image=self.img2_tk, command=self.method2)
+            self.button2f2.grid(row=10, column=1)  # Coloca el botón en la fila 14, columna 3  
+            self.label_b2f2 = tk.Label(self.frame3, text="Informe general", bg='white', fg='black', font=("Arial", 18))
+            self.label_b2f2.grid(row=11, column=1)
         elif choice == "Siguiente medida" and tanda == 2:
             # Recopilar datos y guardarlos en el diccionario
             measure_num = self.measure_var.get()
@@ -1891,7 +1974,105 @@ class ir14dGUI(tk.Tk):
         elif choice == "Siguiente medida":
             self.frame6.grid()
 
-        print(self.datamed)
+    def method1(self):
+        current_directory = os.getcwd()  # Obtener el directorio de trabajo actual
+        template_path = os.path.join(current_directory, "plantilla1.docx")  # Ruta al archivo de plantilla
+        ref_servicio = self.entry_ref_servicio.get()  
+        self.dataxls["Referencia del Servicio Técnico"] = ref_servicio
+        ref_magn = self.combo_units.get()
+        self.dataxls["Magnitud de Medida"] = ref_magn
+        ref_marca = self.entry_marca.get()
+        self.dataxls["Marca"] = ref_marca
+        ref_mod = self.entry_modelo.get()
+        self.dataxls["Modelo"] = ref_mod
+        ref_ser = self.entry_numserie.get()
+        self.dataxls["Número de serie"] = ref_ser
+        ref_qua = self.combo_quality.get()
+        self.dataxls["Calidad"] = ref_qua
+        ref_proc = self.combo_proc.get()
+        self.dataxls["Procedimiento utilizado"] = ref_proc
+        ref_date = self.date_entry.get()
+        self.dataxls["Fecha"] = ref_date
+        ref_cli = self.entry_cliente.get()
+        self.dataxls["Cliente"] = ref_cli
+        ref_sup = self.combo_supervisor.get()
+        self.dataxls["Supervisor"] = ref_sup
+
+        replacements = {
+            'MARCA_REF': ref_servicio,      
+            'MARCA_MAG': ref_magn, 
+            'MARCA_MARCA': ref_marca,
+            'MARCA_MOD': ref_mod,
+            'MARCA_SER': ref_ser,
+            'MARCA_QUA': ref_qua,
+            'MARCA_PROC': ref_proc,
+            'MARCA_DATE': ref_date,
+            'MARCA_CLI': ref_cli,
+            'MARCA_SUP': ref_sup
+        }
+
+        doc = Document(template_path)  # Cargar el documento de Word
+
+        # Reemplazar en párrafos del cuerpo principal
+        for p in doc.paragraphs:
+            self.replace_text_in_paragraph(p, replacements)
+
+        # Reemplazar en tablas en el cuerpo principal
+        for table in doc.tables:
+            self.process_table(table, replacements)
+
+        # Reemplazar en encabezados y pies de página
+        for section in doc.sections:
+            self.process_section_headers_footers(section.header, replacements)
+            self.process_section_headers_footers(section.footer, replacements)
+            if section.even_page_header is not None:
+                self.process_section_headers_footers(section.even_page_header, replacements)
+            if section.even_page_footer is not None:
+                self.process_section_headers_footers(section.even_page_footer, replacements)
+            if section.first_page_header is not None:
+                self.process_section_headers_footers(section.first_page_header, replacements)
+            if section.first_page_footer is not None:
+                self.process_section_headers_footers(section.first_page_footer, replacements)
+
+        # Guardar el documento modificado
+        output_path = os.path.join(current_directory, "documento_modificado.docx")
+        doc.save(output_path)
+        print("Documento modificado y guardado.")
+
+    def process_section_headers_footers(self, part, replacements):
+        """ Process all the paragraphs and tables in a header or footer """
+        for p in part.paragraphs:
+            self.replace_text_in_paragraph(p, replacements)
+        for table in part.tables:
+            self.process_table(table, replacements)
+
+    def process_table(self, table, replacements):
+        """ Process every paragraph in every cell of a table """
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    self.replace_text_in_paragraph(p, replacements)
+
+    def replace_text_in_paragraph(self, paragraph, replacements):
+        """ Reemplaza texto en un párrafo dado con un diccionario de reemplazos """
+        if any(key in paragraph.text for key in replacements):
+            # Si cualquier clave está en el texto del párrafo, reconstruir todo el párrafo
+            inline = paragraph.runs
+            # Reconstruir el texto del párrafo desde los runs
+            full_text = ''.join([run.text for run in inline])
+            for key, value in replacements.items():
+                full_text = full_text.replace(key, value)
+            # Limpiar el párrafo y aplicar el nuevo texto
+            paragraph.clear()
+            paragraph.add_run(full_text)
+
+    def method2(self):
+        self.run_script() 
+        print("PDF RESUMEN creado")
+
+    def run_script(self, *args):
+        # Ejecutar create_pdf.py como un subproceso
+        subprocess.run(["python", "create_pdf.py"])
 
     def calculo_tabla_final(self, avg_kair_tanda2, avg_int_equipo_tanda2):
         try:
@@ -1912,16 +2093,33 @@ class ir14dGUI(tk.Tk):
             incert_kerma_aire_k2 = "some_value"
             incert_magnitud_medida_k2 = "some_value"
 
+            # Inserta los valores en el treeview
             treeview_values = [
                 "Sv", kerma_aire, patron_sv, equipo_sv_h, incert_tasa,
                 integrada_sv, factor_cal_tasa, incert_tasa_k2, factor_cal_integrada,
                 incert_integrada_k2, incert_kerma_aire_k2, incert_magnitud_medida_k2
             ]
-
             self.tree.insert("", "end", values=treeview_values)
             self.frame6.grid()
+
+            # Cierra la ventana de captura web
+            self.cap.release()
+            self.webcam_window.destroy()
+
+            # Captura la ventana tkinter con todos los datos
+            self.capture_tkinter_window()
+
         except ValueError as e:
             tk.messagebox.showerror("Error", f"Invalid numeric value: {e}")
+
+    def capture_tkinter_window(self):
+        # Captura la ventana tkinter
+        x = self.winfo_rootx() + self.frame6.winfo_x()
+        y = self.winfo_rooty() + self.frame6.winfo_y()
+        x1 = x + self.frame6.winfo_width()
+        y1 = y + self.frame6.winfo_height()
+        ImageGrab.grab(bbox=(x, y, x1, y1)).save("tkinter_window_capture.png")
+        print("Captura de ventana tkinter realizada y guardada.")
 
 
     def show_webcam_window(self):
