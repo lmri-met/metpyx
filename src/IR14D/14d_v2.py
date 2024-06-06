@@ -1,5 +1,6 @@
 import tkinter as tk
 import _tkinter
+import sys
 print("Cargando el programa al 5%...")
 from tkinter import ttk
 print("Cargando el programa al 10%...")
@@ -48,7 +49,6 @@ class ir14dGUI(tk.Tk):
     # def __init__(self, master):
     def __init__(self):
         super().__init__()
-        # self.master = master
         self.title("IR14D - PATRÓN DE RAYOS X")
         self.dataxls = {}
         self.datamed = {}
@@ -329,13 +329,6 @@ class ir14dGUI(tk.Tk):
 ##### GUARDO DATOS FRAME 2: START 
             self.combo_electrom_ref.bind("<FocusOut>", self.save_combo_electrom_ref)       
 ##### GUARDO DATOS FRAME 2: END
-            # self.label_elecppal_com = tk.Label(self.frame2, text="Puerto Elec.PPal:", bg='white')
-            #self.label_elecppal_com.grid(row=2, column=1, sticky="w", padx=(5, 0))
-            # opciones_elecppal_com = ["SIMU"] + [f'COM{i}' for i in range(1, 11)]
-            # self.elecppal_com_var = tk.StringVar(value="??")
-            # self.elecppal_com_optionmenu = tk.OptionMenu(self.frame2, self.elecppal_com_var, *opciones_elecppal_com)
-            # self.elecppal_com_optionmenu.grid(row=2, column=2, sticky="w", padx=(0, 5))
-            # self.elecppal_com_optionmenu.configure(bg='white')
 
             # Electrómetro Monitor
             self.label_elecmonit_ref = tk.Label(self.frame2, text="Electr. Monitor", bg='white', fg='black', width=11)
@@ -345,13 +338,6 @@ class ir14dGUI(tk.Tk):
 ##### GUARDO DATOS FRAME 2: START 
             self.combo_elecmonit_ref.bind("<FocusOut>", self.save_combo_elecmonit_ref)       
 ##### GUARDO DATOS FRAME 2: END
-            # self.label_elecmonit_com = tk.Label(self.frame2, text="Puerto Elec.Mon:", bg='white')
-            # self.label_elecmonit_com.grid(row=3, column=1, sticky="w", padx=(5, 0))
-            # opciones_elecmonit_com = ["SIMU"] + [f'COM{i}' for i in range(1, 11)]
-            # self.elecmonit_com_var = tk.StringVar(value="??")
-            # self.elecmonit_com_optionmenu = tk.OptionMenu(self.frame2, self.elecmonit_com_var, *opciones_elecmonit_com)
-            # self.elecmonit_com_optionmenu.grid(row=3, column=2, sticky="w", padx=(0, 5))
-            # self.elecmonit_com_optionmenu.configure(bg='white')
 
             # Barómetro
             self.label_barom_ref = tk.Label(self.frame2, text="Barómetro", bg='white', fg='black', width=11)
@@ -1909,20 +1895,40 @@ class ir14dGUI(tk.Tk):
                 self.measure_var.set(1)
             # Crear y mostrar los botones
             img1 = Image.open("image1.png")
-            img1_resized = img1.resize((170, 170))  # Cambia el tamaño a 1cm x 1cm
+            img1_resized = img1.resize((170, 170))  #
             self.img1_tk = ImageTk.PhotoImage(img1_resized)
             img2 = Image.open("image2.png")
-            img2_resized = img2.resize((170, 170))  # Cambia el tamaño a 1cm x 1cm
+            img2_resized = img2.resize((170, 170))  
             self.img2_tk = ImageTk.PhotoImage(img2_resized)
+            img3 = Image.open("rehacer.png")
+            img3_resized = img3.resize((170, 170))  #
+            self.img3_tk = ImageTk.PhotoImage(img3_resized)
+            img4 = Image.open("salida.png")
+            img4_resized = img4.resize((170, 170))  
+            self.img4_tk = ImageTk.PhotoImage(img4_resized)
             # Crea los botones con las imágenes y los comandos
             self.button1f2 = tk.Button(self.frame3, image=self.img1_tk, command=self.method1)
-            self.button1f2.grid(row=10, column=0)  # Coloca el botón en la fila 14, columna 1
-            self.label_b1f2 = tk.Label(self.frame3, text="Certificado", bg='white', fg='black', font=("Arial", 18))
+            self.button1f2.grid(row=10, column=0)  
+            self.label_b1f2 = tk.Label(self.frame3, text="Certificado", bg='white', fg='black', font=("Arial", 16))
             self.label_b1f2.grid(row=11, column=0)
             self.button2f2 = tk.Button(self.frame3, image=self.img2_tk, command=self.method2)
-            self.button2f2.grid(row=10, column=1)  # Coloca el botón en la fila 14, columna 3  
-            self.label_b2f2 = tk.Label(self.frame3, text="Informe general", bg='white', fg='black', font=("Arial", 18))
+            self.button2f2.grid(row=10, column=1)    
+            self.label_b2f2 = tk.Label(self.frame3, text="Informe general", bg='white', fg='black', font=("Arial", 16))
             self.label_b2f2.grid(row=11, column=1)
+            self.label_b5f2 = tk.Label(self.frame3, text="              ", bg='white', fg='black', font=("Arial", 16))
+            self.label_b5f2.grid(row=12, column=0, columnspan=4)
+            self.label_b6f2 = tk.Label(self.frame3, text="------------------------------------------------", bg='white', fg='black', font=("Arial", 16))
+            self.label_b6f2.grid(row=13, column=0, columnspan=4)
+            self.label_b7f2 = tk.Label(self.frame3, text="              ", bg='white', fg='black', font=("Arial", 16))
+            self.label_b7f2.grid(row=14, column=0, columnspan=4)
+            self.button3f2 = tk.Button(self.frame3, image=self.img3_tk, command=self.method3)
+            self.button3f2.grid(row=15, column=0)  
+            self.label_b3f2 = tk.Label(self.frame3, text="Hacer nueva Calidad", bg='white', fg='black', font=("Arial", 16))
+            self.label_b3f2.grid(row=16, column=0)
+            self.button4f2 = tk.Button(self.frame3, image=self.img4_tk, command=self.method4)
+            self.button4f2.grid(row=15, column=1)    
+            self.label_b4f2 = tk.Label(self.frame3, text="Salir de la app", bg='white', fg='black', font=("Arial", 16))
+            self.label_b4f2.grid(row=16, column=1)
         elif choice == "Siguiente medida" and tanda == 2:
             # Recopilar datos y guardarlos en el diccionario
             measure_num = self.measure_var.get()
@@ -1997,6 +2003,14 @@ class ir14dGUI(tk.Tk):
         self.dataxls["Cliente"] = ref_cli
         ref_sup = self.combo_supervisor.get()
         self.dataxls["Supervisor"] = ref_sup
+        ref_elec = self.combo_electrom_ref.get()
+        self.dataxls["Electrómetro Medidas"] = ref_elec
+        ref_bar = self.combo_barom_ref.get()
+        self.dataxls["Barómetro"] = ref_bar
+        ref_term = self.combo_temp_ref.get()
+        self.dataxls["Termómetro"] = ref_term
+        ref_patron = self.combo_chamber.get()
+        self.dataxls["Cámara patrón"] = ref_patron
 
         replacements = {
             'MARCA_REF': ref_servicio,      
@@ -2008,7 +2022,11 @@ class ir14dGUI(tk.Tk):
             'MARCA_PROC': ref_proc,
             'MARCA_DATE': ref_date,
             'MARCA_CLI': ref_cli,
-            'MARCA_SUP': ref_sup
+            'MARCA_SUP': ref_sup,
+            'MARCA_ELEC': ref_elec,
+            'MARCA_BAR': ref_bar,
+            'MARCA_TERM': ref_term,
+            'MARCA_PATRON': ref_patron
         }
 
         doc = Document(template_path)  # Cargar el documento de Word
@@ -2073,6 +2091,16 @@ class ir14dGUI(tk.Tk):
     def run_script(self, *args):
         # Ejecutar create_pdf.py como un subproceso
         subprocess.run(["python", "create_pdf.py"])
+
+    def method3(self):
+        print("Reiniciando el programa...")
+        self.quit()  # Cierra la ventana actual
+        executable = f'"{sys.executable}"'  # Asegura que la ruta esté entre comillas
+        os.execl(executable, executable, *sys.argv)
+
+    def method4(self):
+        self.quit()  # Cierra la ventana de Tkinter
+        sys.exit()   # Sale del script de Python
 
     def calculo_tabla_final(self, avg_kair_tanda2, avg_int_equipo_tanda2):
         try:
