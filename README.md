@@ -14,6 +14,8 @@
 ![Static Badge](https://img.shields.io/badge/Tests-Passing-green)
 ![Static Badge](https://img.shields.io/badge/CodeCov-100%25-green)
 
+> **WARNING!: Currently working to add new feature to simulate x-ray spectrum with sensitivity analysis.**
+
 ## Table of Contents
 
 - [What is MetPyX?](#what-is-metpyx)
