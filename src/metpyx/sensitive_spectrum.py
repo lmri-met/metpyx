@@ -137,7 +137,6 @@ class SensitiveSpectrum:
 
         # Quality-only initialization
         if quality is not None:
-            # TODO: Get voltage and filtration from quality using MetPyX XrayQualities
             self.quality = quality
             _data = self._resolve_quality()
             self.voltage = _data.get("voltage")
