@@ -49,6 +49,7 @@ Notes:
 # - Possible names for the main class: SensitiveSpectrum, PerturbedSpectrum, DeviatedSpectrum, VariedSpectrum
 from metpyx import XrayQualities
 
+
 def dict_to_tuple_list(dictionary):
     """Convert a mapping to a list of (key, value) tuples.
 
@@ -191,9 +192,11 @@ class SensitiveSpectrum:
         {'voltage': 60.0, 'filtration': [('Al', 4)]}
         """
         x = XrayQualities()
+
         if not x.is_quality(self.quality):
             raise ValueError(f"SensitiveSpectrum error: Unknown quality '{self.quality}'.")
+
         voltage = x.get_peak_kilovoltage(self.quality)
-        filtration = x.get_filtration_thickness(self.quality)
-        filtration = dict_to_tuple_list(filtration) if filtration is not None else None
+        filtration = dict_to_tuple_list(x.get_filtration_thickness(self.quality))
+
         return {"voltage": voltage, "filtration": filtration}
