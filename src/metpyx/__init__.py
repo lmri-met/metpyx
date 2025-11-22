@@ -2,6 +2,6 @@
 
 from .qualities import XrayQualities
 from .quantities import XrayQuantities
-from .sensitive_spectrum import SensitiveSpectrum, dict_to_tuple_list
+from .sensitive_spectrum import SensitiveSpectrum, resolve_quality
 
-__all__ = ['XrayQualities', 'XrayQuantities', 'SensitiveSpectrum', 'dict_to_tuple_list']
+__all__ = ['XrayQualities', 'XrayQuantities', 'SensitiveSpectrum', 'resolve_quality']

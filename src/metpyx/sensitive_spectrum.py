@@ -1,127 +1,162 @@
-"""src.sensitive_spectrum
+"""metpyx.sensitive_spectrum
 
-Module to represent x-ray spectrum sensitivity analysis.
+Utilities for working with reference x-ray qualities and a small
+container type for sensitivity experiments.
 
-This module provides the SensitiveSpectrum class which models an x-ray
-spectrum used for sensitivity/perturbation analysis. The class supports two
-mutually-exclusive initialization patterns:
+This module provides side-effect-free helpers to resolve and normalize
+reference x-ray qualities and a minimal container used to represent an
+x-ray spectrum in sensitivity/perturbation analyses.
 
-- Quality-only: provide a named reference quality via the ``quality``
-  parameter (for example, 'N60').
-- Explicit spectrum: provide numeric ``voltage`` (kV), ``anode`` angle
-  (degrees) and ``filtration`` (an iterable of (material, thickness)
-  pairs, e.g. [('Al', 4), ('Cu', 0.6)]).
+Functions
+---------
+resolve_quality
+    Resolve a named reference quality into a dictionary with keys
+    ``'voltage'`` and ``'filtration'``; filtration is normalized to a
+    list of ``(material, thickness)`` tuples when available.
 
-The constructor also accepts metadata fields such as ``variable``,
-``variation``, ``inherent`` and ``impurity`` which are stored on the
-instance. The constructor enforces that exactly one initialization mode is
-used: providing both quality and explicit spectrum parameters, or providing
-none, will raise ValueError.
+Classes
+-------
+SensitiveSpectrum
+    Container for an x-ray spectrum specified either by a named quality
+    or by explicit parameters (``voltage``, ``anode`` angle, and
+    ``filtration``).
 
-Notes:
-- The module currently stores the provided ``filtration`` value without
-  coercion; callers should supply an iterable of material/thickness pairs.
-- Avoid placing executable examples at module import time; examples should
-  live in tests or example scripts to prevent side effects on import.
+Notes
+-----
+- Filtration values returned by helpers are normalized to a list of
+  ``(material, thickness)`` tuples. When an explicit ``filtration`` is
+  provided to :class:`SensitiveSpectrum`, the value is stored as-is and
+  not coerced by the constructor.
+
+Examples
+--------
+>>> from metpyx.sensitive_spectrum import resolve_quality, SensitiveSpectrum
+>>> resolve_quality('N60')['voltage']
+60.0
+>>> SensitiveSpectrum(quality='N60').filtration
+[('Al', 4.0)]
 """
 
-# Requirements of a module to represent an x-ray spectrum sensitivity analysis
-#
-# Summary:
-# - The main goal of this module is to provide a class to represent an x-ray spectrum sensitivity analysis.
-# - The class represent an x-ray spectrum that has been modified by varying one of its parameters by a certain percentage.
-# - The class focuses on calculating the deviated spectrum characteristics and the effect of the variation in the spectrum characteristics with respect to the unvaried spectrum.
-#
-# About the class initialization:
-# - The class is designed to represent any x-ray spectrum, specifying its high voltage, anode angle and filtration, just like SpekPy and USpekPy.
-# - The class should also be able to represent reference field spectrum, i.e. x-ray qualities, using the MetPyX XrayQualities class.
-#
-# About the variation-related parameters:
-# - The parameters that can be varied are high voltage, filtration thickness and filtration purity.
-# - The class should be able to handle simultaneous variations in high voltage and filtration thickness.
-#
-# About the characterizing quantities:
-# - The quantities that characterize the spectrum are: high voltage, anode angle and filtration.
-# - The integral quantities that characterize the spectrum are: mean energy, HVL, air kerma, mean conversion coefficient.
-#
-# Miscellaneous:
-# - This class subclasses a base class (SpekWrapper) that provides methods to calculate the integral quantities.
-# - Possible names for the main class: SensitiveSpectrum, PerturbedSpectrum, DeviatedSpectrum, VariedSpectrum
 from metpyx import XrayQualities
 
 
-def dict_to_tuple_list(dictionary):
-    """Convert a mapping to a list of (key, value) tuples.
-
-    This utility converts a mapping (for example a dict) into an ordered list
-    of (key, value) tuples. It preserves the iteration order of the provided
-    mapping. The function is intentionally simple and behaves equivalently to
-    list(dictionary.items()).
+def resolve_quality(quality):
+    """Resolve a named quality via MetPyX XrayQualities.
 
     Parameters
     ----------
-    dictionary : Mapping
-        The mapping to convert. Typically a dict where keys are materials or
-        identifiers and values are numeric thicknesses or other properties.
+    quality : str
+        Reference quality name (e.g. 'N60'). Validated with
+        :class:`XrayQualities` (method ``is_quality``).
 
     Returns
     -------
-    list of tuple
-        A list of (key, value) tuples in the order returned by iterating the
-        mapping.
+    result : dict
+        Dictionary containing:
 
-    Example
-    -------
-    >>> dict_to_tuple_list({'Al': 4, 'Cu': 0.6})
-    [('Al', 4), ('Cu', 0.6)]
+        voltage : float or None
+            Peak kilovoltage (kV) for the resolved quality, or ``None`` if
+            not available from the qualities database.
+        filtration : list of tuple or None
+            Filtration as a list of ``(material, thickness)`` tuples, or
+            ``None`` when no filtration information is present.
+
+    Raises
+    ------
+    ValueError
+        If ``quality`` is not a known quality according to
+        :class:`XrayQualities`.
     """
-    return [(i, j) for i, j in zip(dictionary.keys(), dictionary.values())]
+    x = XrayQualities()
+
+    if not x.is_quality(quality):
+        raise ValueError(f"SensitiveSpectrum error: Unknown quality '{quality}'.")
+
+    voltage = x.get_peak_kilovoltage(quality)
+    filtration = list(x.get_filtration_thickness(quality).items())
+
+    return {"voltage": voltage, "filtration": filtration}
 
 
 class SensitiveSpectrum:
-    """
-    Represent an x-ray spectrum for sensitivity analysis.
+    """Container for an x-ray spectrum used in sensitivity analysis.
 
-    This class models an x-ray spectrum that can be specified in one of two
-    mutually-exclusive ways:
-      - Quality-only: provide a named reference quality (e.g. 'N60') via
-        the ``quality`` parameter.
-      - Explicit spectrum: provide numeric ``voltage`` (kV), ``anode`` angle
-        (degrees) and ``filtration`` (an iterable of (material, thickness)
-        pairs, e.g. [('Al', 4), ('Cu', 0.6)]).
+    The constructor supports one of two mutually-exclusive modes:
 
-    The constructor also accepts variation-related metadata fields
-    (``variable``, ``variation``) and additional properties such as
-    ``inherent`` and ``impurity`` which are stored as provided.
+    1) Named-quality mode (pass ``quality``):
+       The provided quality name (e.g. ``'N60'``) is resolved via
+       :func:`resolve_quality`. The resolved ``voltage`` and normalized
+       ``filtration`` populate the instance attributes; ``anode`` is set to
+       ``None``. The original quality name is kept in ``quality``.
 
-    Initialization rules (enforced by the constructor):
-      - Providing both ``quality`` and any explicit spectrum parameter raises
-        ValueError.
-      - Providing no initialization parameters raises ValueError.
-      - When using the explicit form, all three of ``voltage``, ``anode`` and
-        ``filtration`` must be provided.
+    2) Explicit-spectrum mode (provide ``voltage``, ``anode`` and
+       ``filtration``):
+       If any explicit parameter is supplied the constructor requires that
+       all three (``voltage``, ``anode``, ``filtration``) are provided and
+       non-``None``. In this mode ``quality`` is set to ``None`` and the
+       provided ``filtration`` value is stored as given (no coercion).
 
-    Attributes (set after initialization):
-      - quality: str or None
-      - high_voltage: numeric or None (set from ``voltage``)
-      - anode_angle: numeric or None (set from ``anode``)
-      - filtration: iterable or None
-      - variable, variation, inherent, impurity: stored as provided
+    Parameters
+    ----------
+    voltage : float or None, optional
+        Peak kilovoltage (kV) for an explicit spectrum. Default is ``None``.
+    anode : float or None, optional
+        Anode angle in degrees for an explicit spectrum. Default is ``None``.
+    filtration : iterable of tuple or None, optional
+        Filtration as an iterable of ``(material, thickness)`` pairs when
+        supplying an explicit spectrum. When using a named quality,
+        filtration is obtained from the qualities database and normalized to
+        a list of tuples (or ``None`` if unavailable). Default is ``None``.
+    quality : str or None, optional
+        Named quality identifier (e.g. ``'N60'``). Mutually exclusive with
+        explicit-spectrum parameters. Default is ``None``.
+    variable : str or None, optional
+        Optional metadata describing which parameter is being varied.
+    variation : float, optional
+        Optional metadata giving the variation magnitude. Default is ``0``.
+    inherent : object, optional
+        Additional optional metadata stored on the instance.
+    impurity : object, optional
+        Additional optional metadata stored on the instance.
 
-    Notes:
-      - ``filtration`` is expected to be an iterable of (material, thickness)
-        pairs. The constructor currently stores the provided filtration value
-        without additional coercion.
+    Raises
+    ------
+    ValueError
+        If both ``quality`` and any explicit parameter are provided, if any
+        explicit initialization parameter is missing, or if neither mode is
+        satisfied. When resolving a named quality, the underlying
+        :func:`resolve_quality` may also raise ``ValueError`` for unknown
+        quality names.
+
+    Attributes
+    ----------
+    quality : str or None
+        Provided quality name (when using named-quality mode) or ``None``
+        when explicit parameters were used.
+    voltage : float or None
+        Resolved or explicit peak kilovoltage (kV).
+    anode : float or None
+        Anode angle in degrees (explicit) or ``None`` when a named quality
+        was used.
+    filtration : list of tuple or any or None
+        - When constructed from a named quality, filtration is normalized to
+          a list of ``(material, thickness)`` tuples (or ``None`` if
+          unavailable).
+        - When constructed from explicit parameters, the provided
+          ``filtration`` is stored as-is (no coercion by the constructor).
+    variable, variation, inherent, impurity : as passed to constructor
+
+    Examples
+    --------
+    >>> s = SensitiveSpectrum(quality='N60')
+    >>> s.voltage
+    60.0
+    >>> s.filtration
+    [('Al', 4.0)]
     """
 
     def __init__(self, voltage=None, anode=None, filtration=None, quality=None, variable=None, variation=0,
                  inherent=None, impurity=None):
-        """
-        Initialize a SensitiveSpectrum in one of three valid ways:
-        - quality only: quality is provided (e.g. 'N60')
-        - explicit spectrum: high_voltage, anode_angle and filtration provided
-        - otherwise: raise ValueError
-        """
         # Store variation-related fields unchanged
         self.variable = variable
         self.variation = variation
@@ -133,13 +168,13 @@ class SensitiveSpectrum:
 
         # Validate mutually exclusive initialization modes
         if quality is not None and explicit_params:
-            raise ValueError(
-                "SensitiveSpectrum initialization error: Provide either `quality` OR `high_voltage`/`anode_angle`/`filtration`, not both.")
+            raise ValueError(f"SensitiveSpectrum initialization error: "
+                             f"Must initialize with either `quality` or (`voltage`, `anode`, `filtration`).")
 
         # Quality-only initialization
         if quality is not None:
             self.quality = quality
-            _data = self._resolve_quality()
+            _data = resolve_quality(quality)
             self.voltage = _data.get("voltage")
             self.anode = None
             self.filtration = _data.get("filtration")
@@ -148,8 +183,9 @@ class SensitiveSpectrum:
         if explicit_params:
             # If any explicit parameter is provided we require all three
             if voltage is None or anode is None or filtration is None:
-                raise ValueError(
-                    "SensitiveSpectrum initialization error: When using explicit spectrum initialization you must provide `high_voltage`, `anode_angle` and `filtration`.")
+                raise ValueError(f"SensitiveSpectrum initialization error: "
+                                 f"When using explicit spectrum initialization you must provide "
+                                 f"`high_voltage`, `anode_angle` and `filtration`.")
             self.quality = None
             self.voltage = voltage
             self.anode = anode
@@ -157,46 +193,5 @@ class SensitiveSpectrum:
             return
 
         # No valid initialization provided
-        raise ValueError(
-            "SensitiveSpectrum initialization error: Must initialize with either `quality` or (`high_voltage`, `anode_angle`, `filtration`).")
-
-    def _resolve_quality(self):
-        """Resolve a named quality via MetPyX XrayQualities.
-
-        Query MetPyX's XrayQualities for the named quality stored on the
-        instance (self.quality) and return a small mapping describing the
-        resolved spectrum parameters.
-
-        Returns
-        -------
-        dict
-            A dictionary with the following keys:
-            - "voltage" (float or None): the nominal peak kilovoltage (kV)
-              associated with the named quality, or None if unavailable.
-            - "filtration" (list of (str, float) tuples or None): the
-              filtration specification converted to a list of (material,
-              thickness) tuples. The conversion is performed using
-              :func:`dict_to_tuple_list` to normalize the value returned by
-              XrayQualities.get_filtration_thickness(). If XrayQualities
-              returns None, this value will also be None.
-
-        Raises
-        ------
-        ValueError
-            If ``self.quality`` is not a recognized quality name.
-
-        Example
-        -------
-        >>> s = SensitiveSpectrum(quality='N60')
-        >>> s._resolve_quality()
-        {'voltage': 60.0, 'filtration': [('Al', 4)]}
-        """
-        x = XrayQualities()
-
-        if not x.is_quality(self.quality):
-            raise ValueError(f"SensitiveSpectrum error: Unknown quality '{self.quality}'.")
-
-        voltage = x.get_peak_kilovoltage(self.quality)
-        filtration = dict_to_tuple_list(x.get_filtration_thickness(self.quality))
-
-        return {"voltage": voltage, "filtration": filtration}
+        raise ValueError(f"SensitiveSpectrum initialization error: "
+                         f"Must initialize with either `quality` or (`voltage`, `anode`, `filtration`).")

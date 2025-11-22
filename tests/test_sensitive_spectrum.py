@@ -1,20 +1,19 @@
 import pytest
 
-from metpyx import SensitiveSpectrum, dict_to_tuple_list
+from metpyx import SensitiveSpectrum, resolve_quality
 
-class TestDictToTupleList:
 
-    def test_empty_dict(self):
-        result = dict_to_tuple_list({})
-        assert result == []
+class TestResolveQuality:
 
-    def test_single_item_dict(self):
-        result = dict_to_tuple_list({'Al': 4})
-        assert result == [('Al', 4)]
+    def test_valid_quality(self):
+        resolved = resolve_quality('N60')
+        assert resolved['voltage'] == 60
+        assert resolved['filtration'] == [('Be', 0), ('Pb', 0), ('Sn', 0.0), ('Cu', 0.6), ('Al', 4.0)]
 
-    def test_multiple_items_dict(self):
-        result = dict_to_tuple_list({'Al': 4, 'Cu': 0.6, 'Air': 1000})
-        assert result == [('Al', 4), ('Cu', 0.6), ('Air', 1000)]
+    def test_invalid_quality_raises(self):
+        with pytest.raises(ValueError):
+            resolve_quality('invalid_quality')
+
 
 class TestSensitiveSpectrumInitialization:
 
