@@ -25,7 +25,6 @@ Notes:
   live in tests or example scripts to prevent side effects on import.
 """
 
-
 # Requirements of a module to represent an x-ray spectrum sensitivity analysis
 #
 # Summary:
@@ -48,6 +47,34 @@ Notes:
 # Miscellaneous:
 # - This class subclasses a base class (SpekWrapper) that provides methods to calculate the integral quantities.
 # - Possible names for the main class: SensitiveSpectrum, PerturbedSpectrum, DeviatedSpectrum, VariedSpectrum
+from metpyx import XrayQualities
+
+def dict_to_tuple_list(dictionary):
+    """Convert a mapping to a list of (key, value) tuples.
+
+    This utility converts a mapping (for example a dict) into an ordered list
+    of (key, value) tuples. It preserves the iteration order of the provided
+    mapping. The function is intentionally simple and behaves equivalently to
+    list(dictionary.items()).
+
+    Parameters
+    ----------
+    dictionary : Mapping
+        The mapping to convert. Typically a dict where keys are materials or
+        identifiers and values are numeric thicknesses or other properties.
+
+    Returns
+    -------
+    list of tuple
+        A list of (key, value) tuples in the order returned by iterating the
+        mapping.
+
+    Example
+    -------
+    >>> dict_to_tuple_list({'Al': 4, 'Cu': 0.6})
+    [('Al', 4), ('Cu', 0.6)]
+    """
+    return [(i, j) for i, j in zip(dictionary.keys(), dictionary.values())]
 
 
 class SensitiveSpectrum:
@@ -110,10 +137,12 @@ class SensitiveSpectrum:
 
         # Quality-only initialization
         if quality is not None:
+            # TODO: Get voltage and filtration from quality using MetPyX XrayQualities
             self.quality = quality
-            self.high_voltage = None
-            self.anode_angle = None
-            self.filtration = None
+            _data = self._resolve_quality()
+            self.voltage = _data.get("voltage")
+            self.anode = None
+            self.filtration = _data.get("filtration")
             return
 
         if explicit_params:
@@ -122,11 +151,50 @@ class SensitiveSpectrum:
                 raise ValueError(
                     "SensitiveSpectrum initialization error: When using explicit spectrum initialization you must provide `high_voltage`, `anode_angle` and `filtration`.")
             self.quality = None
-            self.high_voltage = voltage
-            self.anode_angle = anode
+            self.voltage = voltage
+            self.anode = anode
             self.filtration = filtration
             return
 
         # No valid initialization provided
         raise ValueError(
             "SensitiveSpectrum initialization error: Must initialize with either `quality` or (`high_voltage`, `anode_angle`, `filtration`).")
+
+    def _resolve_quality(self):
+        """Resolve a named quality via MetPyX XrayQualities.
+
+        Query MetPyX's XrayQualities for the named quality stored on the
+        instance (self.quality) and return a small mapping describing the
+        resolved spectrum parameters.
+
+        Returns
+        -------
+        dict
+            A dictionary with the following keys:
+            - "voltage" (float or None): the nominal peak kilovoltage (kV)
+              associated with the named quality, or None if unavailable.
+            - "filtration" (list of (str, float) tuples or None): the
+              filtration specification converted to a list of (material,
+              thickness) tuples. The conversion is performed using
+              :func:`dict_to_tuple_list` to normalize the value returned by
+              XrayQualities.get_filtration_thickness(). If XrayQualities
+              returns None, this value will also be None.
+
+        Raises
+        ------
+        ValueError
+            If ``self.quality`` is not a recognized quality name.
+
+        Example
+        -------
+        >>> s = SensitiveSpectrum(quality='N60')
+        >>> s._resolve_quality()
+        {'voltage': 60.0, 'filtration': [('Al', 4)]}
+        """
+        x = XrayQualities()
+        if not x.is_quality(self.quality):
+            raise ValueError(f"SensitiveSpectrum error: Unknown quality '{self.quality}'.")
+        voltage = x.get_peak_kilovoltage(self.quality)
+        filtration = x.get_filtration_thickness(self.quality)
+        filtration = dict_to_tuple_list(filtration) if filtration is not None else None
+        return {"voltage": voltage, "filtration": filtration}
