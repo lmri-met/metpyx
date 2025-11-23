@@ -1,3 +1,4 @@
+# TODO: Add module docstring
 class Qualities:
     """
     Manage X-ray radiation qualities and their filtration data.

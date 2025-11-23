@@ -1,3 +1,4 @@
+# TODO: Add module docstring
 import numpy as np
 import pytest
 from spekpy import Spek
@@ -55,7 +56,7 @@ class TestSimulatedSpectrumConstructor:
         with pytest.raises(Exception):
             sim.SimulatedSpectrum(voltage=30, filtration="INVALID")
 
-    def test_quality_initialization(self):  # TODO
+    def test_quality_initialization(self):
         """Quality-based initialization returns expected spectral data.
 
         Constructs a :class:`SimulatedSpectrum` using a named quality and an
@@ -79,7 +80,7 @@ class TestSimulatedSpectrumConstructor:
         assert np.allclose(result.energy, expected_energy)
         assert np.allclose(result.fluence, expected_fluence)
 
-    def test_voltage_initialization(self):  # TODO
+    def test_voltage_initialization(self):
         """Explicit voltage initialization produces the correct spectrum.
 
         When constructed with explicit ``voltage`` and ``anode`` (without
@@ -99,7 +100,7 @@ class TestSimulatedSpectrumConstructor:
         assert np.allclose(result.energy, expected_energy)
         assert np.allclose(result.fluence, expected_fluence)
 
-    def test_voltage_filtration_initialization(self):  # TODO
+    def test_voltage_filtration_initialization(self):
         """Voltage+filtration initialization applies filters and matches spekpy.
 
         Constructing with explicit ``voltage``, ``anode`` and ``filtration``

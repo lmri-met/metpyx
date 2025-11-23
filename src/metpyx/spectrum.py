@@ -44,7 +44,7 @@ import numpy as np
 import pandas as pd
 
 
-def mean_energy(energy, fluence):  # TODO: Implement, document and test
+def mean_energy(energy, fluence):
     """Compute the fluence-weighted mean energy.
 
     Parameters
@@ -142,9 +142,9 @@ def read_csv(filepath, columns=None, spectrum=False, **kwargs):
         elif all(isinstance(x, int) for x in columns):
             energy = df.iloc[:, columns[0]].values
             value = df.iloc[:, columns[1]].values
-        else:  # TODO: test
+        else:
             raise ValueError("Columns must be a two-element sequence of str or int")
-    else:  # TODO: test
+    else:
         raise ValueError("Columns must be a two-element sequence of str or int")
 
     if spectrum:
@@ -347,6 +347,9 @@ class Spectrum(SpectralQuantity):
     >>> s.fluence
     array([0.1, 0.2, 0.3])
     """
+    # TODO: Add features to compute hvl1, hvl2, air kerma and mean conversion coefficient.
+    # TODO: Validate hvl1, hvl2 and air kerma calculations with spekpy.
+    # TODO: Validate mean conversion coefficient.
     DEFAULT_LABELS = ('Energy', 'Fluence')
 
     def __init__(self, energy, fluence):

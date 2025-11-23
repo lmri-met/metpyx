@@ -1,3 +1,4 @@
+# TODO: Add docstrings to module, classes and methods
 import pytest
 
 from metpyx.data import Qualities, Quantities
@@ -142,7 +143,7 @@ class TestQualities:
                 x.get_filtration(q)
             assert f'{q} is not an x-ray radiation quality.' in str(exc_info.value)
 
-    def test_get_filtration_inherent(self):  # TODO
+    def test_get_filtration_inherent(self):
         x = Qualities()
 
         l_qualities = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
@@ -169,7 +170,7 @@ class TestQualities:
         for q, r, e in zip(qualities, result_filtration, expected_filtration):
             assert r == e, f'{q} quality, expected {e}, got {r}'
 
-    def test_get_filtration_additional(self):  # TODO
+    def test_get_filtration_additional(self):
         x = Qualities()
 
         l_qualities = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
