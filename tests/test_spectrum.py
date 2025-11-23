@@ -43,8 +43,60 @@ import io
 import numpy as np
 import pandas as pd
 import pytest
+import spekpy as spk
 
 import metpyx.spectrum as sp
+
+
+class TestMeanEnergy:
+    """Unit tests for :func:`metpyx.spectrum.mean_energy`.
+
+    This test class verifies the core behaviours of the ``mean_energy``
+    helper: correct fluence-weighted mean calculation and handling of a
+    zero total fluence.
+
+    Notes
+    -----
+    Tests use small :mod:`numpy` arrays and rely on :mod:`pytest` helpers
+    (``pytest.approx`` and ``pytest.raises``) and :func:`numpy.isnan`
+    for numeric assertions.
+    """
+
+    def test_value(self):
+        """Verify correct fluence-weighted mean is returned.
+
+        Constructs simple ``energy`` and ``fluence`` arrays and asserts that
+        the returned scalar equals::
+
+            sum(energy * fluence) / sum(fluence)
+
+        Raises
+        ------
+        AssertionError
+            If the computed value does not approximately equal the expected result.
+        """
+        energy = np.array([1, 2, 3])
+        fluence = np.array([10, 20, 10])
+        expected = (1 * 10 + 2 * 20 + 3 * 10) / (10 + 20 + 10)
+        result = sp.mean_energy(energy, fluence)
+        assert result == pytest.approx(expected)
+
+    def test_zero_total_fluence_returns_nan(self):
+        """Return NaN when the total fluence is zero.
+
+        When the ``fluence`` array sums to zero the implementation performs
+        a division that yields ``NaN``. This test verifies that behaviour by
+        asserting the result is ``numpy.nan``.
+
+        Raises
+        ------
+        AssertionError
+            If the result is not ``NaN``.
+        """
+        energy = np.array([1, 2, 3])
+        fluence = np.array([0, 0, 0])
+        result = sp.mean_energy(energy, fluence)
+        assert np.isnan(result)
 
 
 class TestReadCSV:
@@ -349,3 +401,46 @@ class TestSpectrumConstructor:
         assert np.allclose(s.fluence, np.array([0.1, 0.2, 0.3]))
         # fluence should be a semantic alias of value
         assert s.fluence is s.value
+
+
+class TestSpectrumGetMeanEnergy:
+    """Unit tests for :meth:`metpyx.spectrum.Spectrum.get_mean_energy`.
+
+    These tests verify that :meth:`metpyx.spectrum.Spectrum.get_mean_energy`
+    computes the same mean energy as the reference implementation in
+    :mod:`spekpy` for a representative spectrum. The class uses
+    :mod:`spekpy` to generate a test spectrum (energy and fluence) and
+    compares the result of the method under test to ``spekpy``'s
+    ``get_emean`` result.
+
+    Notes
+    -----
+    - Requires ``spekpy`` to be importable in the test environment.
+    - Tests assert numeric equality/approximate equality; small numeric
+      differences may be acceptable but are checked with ``pytest.approx``.
+    """
+
+    def test_get_mean_energy(self):
+        """Compare :meth:`Spectrum.get_mean_energy` against the spekpy reference.
+
+        The test constructs a ``spekpy.Spek`` instance with typical tube
+        parameters, obtains its (energy, fluence) spectrum and reference
+        mean energy, wraps the arrays in a
+        :class:`metpyx.spectrum.Spectrum`, and verifies that
+        ``Spectrum.get_mean_energy()`` returns the expected scalar.
+
+        Raises
+        ------
+        AssertionError
+            If the computed mean energy does not approximately equal the
+            spekpy-provided expected value.
+        """
+        s = spk.Spek(30, 20)
+        energy, fluence = s.get_spectrum()
+        expected = s.get_emean()
+
+        spectrum = sp.Spectrum(energy, fluence)
+        result = spectrum.get_mean_energy()
+
+        assert result == expected
+        assert result == pytest.approx(expected)

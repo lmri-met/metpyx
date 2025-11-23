@@ -44,6 +44,46 @@ import numpy as np
 import pandas as pd
 
 
+def mean_energy(energy, fluence):  # TODO: Implement, document and test
+    """Compute the fluence-weighted mean energy.
+
+    Parameters
+    ----------
+    energy : array_like
+        Sequence of photon energies. The function does not convert inputs;
+        they must support element-wise multiplication with ``fluence`` (for
+        example, :class:`numpy.ndarray` objects).
+    fluence : array_like
+        Sequence of fluence values corresponding to ``energy``. Must be
+        broadcast-compatible with ``energy`` for element-wise multiplication.
+
+    Returns
+    -------
+    numpy.floating
+        Scalar equal to ``sum(energy * fluence) / sum(fluence)``. The exact
+        return type (NumPy scalar or Python float) depends on the input types.
+
+    Raises
+    ------
+    TypeError, ValueError
+        If the inputs are not compatible for element-wise multiplication or
+        if NumPy raises an exception during the arithmetic operations.
+
+    Notes
+    -----
+    - This function performs no conversion (e.g., :func:`numpy.asarray`) or
+      validation of inputs; callers should convert/validate as needed.
+    - If ``sum(fluence)`` is zero the result will be ``NaN`` and NumPy may
+      emit a ``RuntimeWarning`` due to invalid division.
+
+    Examples
+    --------
+    >>> mean_energy(np.array([1, 2, 3]), np.array([10, 20, 30]))
+    2.3333333333333335
+    """
+    return np.divide(np.sum(fluence * energy), np.sum(fluence))
+
+
 def read_csv(filepath, columns=None, spectrum=False, **kwargs):
     """Read a two-column CSV into a SpectralQuantity or Spectrum.
 
@@ -102,9 +142,9 @@ def read_csv(filepath, columns=None, spectrum=False, **kwargs):
         elif all(isinstance(x, int) for x in columns):
             energy = df.iloc[:, columns[0]].values
             value = df.iloc[:, columns[1]].values
-        else: # TODO: test
+        else:  # TODO: test
             raise ValueError("Columns must be a two-element sequence of str or int")
-    else: # TODO: test
+    else:  # TODO: test
         raise ValueError("Columns must be a two-element sequence of str or int")
 
     if spectrum:
@@ -351,3 +391,25 @@ class Spectrum(SpectralQuantity):
         externally).
         """
         return self.value
+
+    def get_mean_energy(self):
+        """Compute the fluence-weighted mean energy of the spectrum.
+
+        Returns
+        -------
+        numpy.floating
+            Scalar equal to ``sum(energy * fluence) / sum(fluence)``. The exact
+            return type (NumPy scalar or Python float) depends on the input types.
+
+        Notes
+        -----
+        - If ``sum(fluence)`` is zero the result will be ``NaN`` and NumPy may
+          emit a ``RuntimeWarning`` due to invalid division.
+
+        Examples
+        --------
+        >>> s = Spectrum([1, 2, 3], [10, 20, 30])
+        >>> s.get_mean_energy()
+        2.3333333333333335
+        """
+        return mean_energy(self.energy, self.fluence)
