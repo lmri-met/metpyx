@@ -372,25 +372,8 @@ class Spectrum(SpectralQuantity):
             non-finite values).
         """
         super().__init__(energy, fluence)
-
-    @property
-    def fluence(self):
-        """Fluence array (read-only alias for :attr:`value`).
-
-        Returns
-        -------
-        numpy.ndarray
-            1-D float array holding the fluence values (same object as
-            :attr:`value`).
-
-        Notes
-        -----
-        This property is read-only; assigning to ``fluence`` will raise
-        :class:`AttributeError`. To update the fluence after construction,
-        assign to ``value`` instead (and perform any desired validation
-        externally).
-        """
-        return self.value
+        self.fluence = self.value
+        delattr(self, "value")
 
     def get_mean_energy(self):
         """Compute the fluence-weighted mean energy of the spectrum.

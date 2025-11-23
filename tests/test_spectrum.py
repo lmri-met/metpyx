@@ -162,7 +162,7 @@ class TestReadCSV:
         result = sp.read_csv(str(csv_path), columns=("energy", "fluence"), spectrum=True)
         assert isinstance(result, sp.Spectrum)
         assert np.allclose(result.energy, np.array([1, 2, 3]))
-        assert np.allclose(result.value, np.array([10, 20, 30]))
+        assert np.allclose(result.fluence, np.array([10, 20, 30]))
 
     def test_columns_by_index(self, tmp_path):
         """Select columns by integer index positions.
@@ -368,8 +368,7 @@ class TestSpectrumConstructor:
 
     These tests validate the behaviour of :class:`metpyx.spectrum.Spectrum` on
     construction. They check that inputs are converted to 1-D floating
-    :class:`numpy.ndarray` objects, that the semantic alias ``fluence`` maps
-    to the underlying ``value`` array, and that invalid inputs raise
+    :class:`numpy.ndarray` objects, and that invalid inputs raise
     appropriate :class:`ValueError` exceptions (non-1D inputs, mismatched
     lengths, or non-finite values).
 
@@ -385,22 +384,17 @@ class TestSpectrumConstructor:
         """Construction converts inputs and exposes a fluence alias.
 
         Given 1-D Python sequences for ``energy`` and ``fluence``, the
-        constructor should produce ``energy``, ``value`` and ``fluence``
+        constructor should produce ``energy`` and ``fluence``
         attributes that are :class:`numpy.ndarray` instances with floating
-        dtype and matching numeric contents. ``fluence`` must be a semantic
-        alias of ``value`` (i.e., refer to the same object).
+        dtype and matching numeric contents.
         """
         s = sp.Spectrum([1, 2, 3], (0.1, 0.2, 0.3))
         assert isinstance(s.energy, np.ndarray)
-        assert isinstance(s.value, np.ndarray)
         assert isinstance(s.fluence, np.ndarray)
         assert np.issubdtype(s.energy.dtype, np.floating)
-        assert np.issubdtype(s.value.dtype, np.floating)
         assert np.issubdtype(s.fluence.dtype, np.floating)
         assert np.allclose(s.energy, np.array([1.0, 2.0, 3.0]))
         assert np.allclose(s.fluence, np.array([0.1, 0.2, 0.3]))
-        # fluence should be a semantic alias of value
-        assert s.fluence is s.value
 
 
 class TestSpectrumGetMeanEnergy:
