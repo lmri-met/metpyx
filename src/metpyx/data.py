@@ -1,4 +1,23 @@
-# TODO: Add module docstring
+"""metpyx.data
+
+Utilities for X-ray radiation qualities and operational quantities.
+
+This module exposes two lightweight helper classes used elsewhere in the
+package:
+
+- :class:`Qualities` — holds the standard X‑ray quality series together with
+  inherent and additional filtration specifications and convenience
+  exporters such as :meth:`Qualities.to_df`.
+- :class:`Quantities` — maps operational dose/fluence quantity names to
+  the standard irradiation angles.
+
+The module intentionally provides small, well-documented data accessors and
+export helpers; no heavy I/O or numerical computation is performed here.
+"""
+
+import pandas as pd
+
+
 class Qualities:
     """
     Manage X-ray radiation qualities and their filtration data.
@@ -7,6 +26,9 @@ class Qualities:
     per-quality inherent and additional filtration specifications. It
     exposes convenience methods to validate series/quality names and to
     retrieve series, peak kilovoltage and filtration components.
+
+    In addition to data accessors this class provides a small exporter
+    convenience method which compiles tabulated qualities information.
 
     Attributes
     ----------
@@ -324,6 +346,64 @@ class Qualities:
         else:
             raise ValueError(f'{quality} is not an x-ray radiation quality.')
 
+    def to_df(self):
+        """
+        Construct a pandas DataFrame summarising qualities and their filtration.
+
+        The returned DataFrame lists every registered radiation quality together
+        with its peak tube potential and the thicknesses of common filtration
+        materials (in millimetres). Inherent filtration columns are provided for
+        beryllium and aluminium, and additional filtration columns for lead,
+        tin, copper and aluminium. Missing filtration entries are represented as
+        ``None``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame with the following columns:
+
+            - ``Quality`` (:class:`str`):
+                Quality name (e.g. ``'N60'``).
+            - ``Tube potential (kV)`` (:class:`int`):
+                Peak kilovoltage parsed from the quality name.
+            - ``Inherent filtration (mm Be)`` (:class:`float` or ``None``):
+                Beryllium inherent filtration thickness in mm, if present.
+            - ``Inherent filtration (mm Al)`` (:class:`float` or ``None``):
+                Aluminium inherent filtration thickness in mm, if present.
+            - ``Additional filtration (mm Pb)`` (:class:`float` or ``None``):
+                Lead additional filtration thickness in mm, if present.
+            - ``Additional filtration (mm Sn)`` (:class:`float` or ``None``):
+                Tin additional filtration thickness in mm, if present.
+            - ``Additional filtration (mm Cu)`` (:class:`float` or ``None``):
+                Copper additional filtration thickness in mm, if present.
+            - ``Additional filtration (mm Al)`` (:class:`float` or ``None``):
+                Aluminium additional filtration thickness in mm, if present.
+
+        Notes
+        -----
+        The DataFrame is assembled by iterating the standard series
+        ``('L', 'N', 'W', 'H')`` and using :meth:`get_filtration` with
+        ``inherent=True`` and ``additional=True`` to extract per-quality
+        filtration components.
+        """
+        qualities = [quality for series in ('L', 'N', 'W', 'H') for quality in self.get_qualities(series)]
+        voltages = [self.get_voltage(quality) for quality in qualities]
+        data = {'Quality': qualities, 'Tube potential (kV)': voltages}
+
+        filters = [self.get_filtration(quality, inherent=True) for quality in qualities]
+        for layer in ['Be', 'Al']:
+            value = [next((thick for material, thick in quality if material == layer), None) for quality in filters]
+            data[f'Inherent filtration (mm {layer})'] = value
+
+        filters = [self.get_filtration(quality, additional=True) for quality in qualities]
+        for layer in ['Pb', 'Sn', 'Cu', 'Al']:
+            value = [next((thick for material, thick in quality if material == layer), None) for quality in filters]
+            data[f'Additional filtration (mm {layer})'] = value
+
+        return pd.DataFrame(data)
+
+
+
 
 class Quantities:
     """
@@ -415,4 +495,4 @@ class Quantities:
         if self.is_quantity(quantity):
             return self.OPERATIONAL_QUANTITIES[quantity]
         else:
-            raise ValueError(f'{quantity} is not an x-ray operational quantity.')
+            raise ValueError(f'{quantity} is not a x-ray operational quantity.')

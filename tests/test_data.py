@@ -1,4 +1,6 @@
 # TODO: Add docstrings to module, classes and methods
+import numpy as np
+import numpy.testing as npt
 import pytest
 
 from metpyx.data import Qualities, Quantities
@@ -239,6 +241,83 @@ class TestQualities:
 
         for q, r, e in zip(qualities, result_filtration, expected_filtration):
             assert r == e, f'{q} quality, expected {e}, got {r}'
+
+    def test_to_df(self):
+        """
+        Test Qualities.to_df returns a complete filtration/qualities table.
+
+        Verifies that :meth:`Qualities.to_df` constructs a pandas DataFrame with
+        one row per registered radiation quality and the expected columns.
+
+        The test checks:
+        - The DataFrame length equals the total number of qualities (series L, N, W, H).
+        - Column names match the expected set including inherent and additional
+          filtration columns for common materials.
+        - The 'Quality' column preserves the expected ordering of qualities.
+        - The 'Tube potential (kV)' values are parsed correctly from quality names.
+        - Inherent and additional filtration columns contain the expected
+          thickness values (in millimetres) or NaN where a material is not
+          present for a given quality.
+        """
+        x = Qualities()
+        df = x.to_df()
+        result_length = len(df)
+        result_columns = df.columns.tolist()
+        result_qualities = df['Quality'].tolist()
+        result_voltages = df['Tube potential (kV)'].tolist()
+        result_inherent_be = df['Inherent filtration (mm Be)'].tolist()
+        result_inherent_al = df['Inherent filtration (mm Al)'].tolist()
+        result_additional_pb = df['Additional filtration (mm Pb)'].tolist()
+        result_additional_sn = df['Additional filtration (mm Sn)'].tolist()
+        result_additional_cu = df['Additional filtration (mm Cu)'].tolist()
+        result_additional_al = df['Additional filtration (mm Al)'].tolist()
+
+        length = 50
+        columns = ['Quality', 'Tube potential (kV)', 'Inherent filtration (mm Be)', 'Inherent filtration (mm Al)',
+                   'Additional filtration (mm Pb)', 'Additional filtration (mm Sn)', 'Additional filtration (mm Cu)',
+                   'Additional filtration (mm Al)']
+        qualities = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240', 'N10', 'N15',
+                     'N20', 'N25', 'N30', 'N40', 'N60', 'N80', 'N100', 'N120', 'N150', 'N200', 'N250', 'N300', 'N350',
+                     'N400', 'W30', 'W40', 'W60', 'W80', 'W110', 'W150', 'W200', 'W250', 'W300', 'H10', 'H20', 'H30',
+                     'H40', 'H60', 'H80', 'H100', 'H150', 'H200', 'H250', 'H280', 'H300', 'H350', 'H400']
+        voltages = [10, 20, 30, 35, 55, 70, 100, 125, 170, 210, 240, 10, 15, 20, 25, 30, 40, 60, 80, 100, 120, 150, 200,
+                    250, 300, 350, 400, 30, 40, 60, 80, 110, 150, 200, 250, 300, 10, 20, 30, 40, 60, 80, 100, 150, 200,
+                    250, 280, 300, 350, 400]
+        inherent_be = [1.0, 1.0, 1.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.0, 1.0, 1.0,
+                       1.0, 1.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                       1.0, 1.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.0, 1.0, 1.0, 1.0, 1.0,
+                       np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+        inherent_al = [np.nan, np.nan, np.nan, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, np.nan, np.nan, np.nan, np.nan,
+                       np.nan, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, np.nan, np.nan, 4.0, 4.0, 4.0,
+                       4.0, 4.0, 4.0, 4.0, np.nan, np.nan, np.nan, np.nan, np.nan, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0,
+                       4.0, 4.0]
+        additional_pb = [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.5, 3.5, 5.5, np.nan, np.nan,
+                         np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.0, 3.0, 5.0, 7.0,
+                         10.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                         np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+        additional_sn = [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 2.0, 4.0, 3.0, 2.0, 2.0, np.nan, np.nan,
+                         np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.0, 2.5, 3.0, 2.0, 3.0, 4.5, 6.0,
+                         np.nan, np.nan, np.nan, np.nan, np.nan, 1.0, 2.0, 4.0, 6.5, np.nan, np.nan, np.nan, np.nan,
+                         np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+        additional_cu = [np.nan, np.nan, 0.18, 0.25, 1.2, 2.5, 0.5, 1.0, 1.0, 0.5, 0.5, np.nan, np.nan, np.nan, np.nan,
+                         np.nan, 0.21, 0.6, 2.0, 5.0, 5.0, np.nan, 2.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                         0.3, 0.5, 2.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                         0.15, 0.5, 1.0, 1.6, 3.0, 2.2, 3.4, 4.7]
+        additional_al = [0.3, 2.0, 4.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 0.1, 0.5, 1.0,
+                         2.0, 4.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                         np.nan, 2.0, 4.0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 0.15, 0.5,
+                         1.0, 3.9, 3.2, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+
+        npt.assert_array_equal(np.asarray(result_length), np.asarray(length))
+        npt.assert_array_equal(np.asarray(result_columns), np.asarray(columns))
+        npt.assert_array_equal(np.asarray(result_qualities), np.asarray(qualities))
+        npt.assert_array_equal(np.asarray(result_voltages), np.asarray(voltages))
+        npt.assert_array_equal(np.asarray(result_inherent_be), np.asarray(inherent_be))
+        npt.assert_array_equal(np.asarray(result_inherent_al), np.asarray(inherent_al))
+        npt.assert_array_equal(np.asarray(result_additional_pb), np.asarray(additional_pb))
+        npt.assert_array_equal(np.asarray(result_additional_sn), np.asarray(additional_sn))
+        npt.assert_array_equal(np.asarray(result_additional_cu), np.asarray(additional_cu))
+        npt.assert_array_equal(np.asarray(result_additional_al), np.asarray(additional_al))
 
 
 class TestQuantities:
