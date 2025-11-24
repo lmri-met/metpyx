@@ -1,4 +1,25 @@
-# TODO: Add module docstring
+"""Simulation helpers for X‑ray spectra (metpyx.simulation)
+
+This module provides a small helper class for constructing simulated
+X‑ray spectra using the external package :mod:`spekpy`.
+
+The primary public symbol is:
+
+SimulatedSpectrum
+    A convenience wrapper around :class:`metpyx.spectrum.Spectrum` which
+    delegates spectrum generation to :class:`spekpy.Spek`. The class supports
+    two initialization modes: (1) quality-based construction using
+    :class:`metpyx.data.Qualities` to look up standard voltages and
+    filtration, and (2) explicit voltage-based construction where the caller
+    supplies the voltage and optional filtration parameters directly.
+
+Notes
+-----
+- This module intentionally keeps the interface small and focuses on
+  wiring :mod:`spekpy` output into the package's :class:`Spectrum` type.
+- The runtime environment used when running tests or examples must have
+  :mod:`spekpy` available.
+"""
 # TODO: Add feature to do sensitivity analysis on simulated spectrum.
 # TODO: Add feature to do uncertainty calculation on simulated spetrum using Monte Carlo.
 import spekpy as sp

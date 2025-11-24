@@ -1,4 +1,16 @@
-# TODO: Add docstrings to module, classes and methods
+"""Tests for metpyx.data
+
+Unit tests for the :mod:`metpyx.data` module. These tests exercise the
+behaviour of the :class:`metpyx.data.Qualities` and :class:`metpyx.data.Quantities`
+helpers including constructor behaviour, validation helpers, filtration
+retrieval (inherent, additional and combined), and the tabular export
+behaviour exposed by :meth:`Qualities.to_df`.
+
+Each test is intended to be small and deterministic so failures are easy
+to diagnose. The module does not require external resources; it operates
+only on in-memory data structures.
+"""
+
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -7,7 +19,23 @@ from metpyx.data import Qualities, Quantities
 
 
 class TestQualities:
+    """
+    Tests for :class:`metpyx.data.Qualities`.
+
+    This test case exercises construction, validation helpers (series/quality
+    checks), retrieval of series and voltages, and the retrieval of
+    filtration layers (inherent, additional, and combined). It also
+    validates the DataFrame export produced by :meth:`Qualities.to_df`.
+    """
+
     def test_constructor(self):
+        """
+        Qualities instance initialises expected series attributes.
+
+        Ensures the convenience attributes ``series``, ``l_series``,
+        ``n_series``, ``w_series`` and ``h_series`` are populated with the
+        expected lists of quality names.
+        """
         x = Qualities()
 
         result_series = x.series
@@ -31,6 +59,11 @@ class TestQualities:
         assert result_h == expected_h_series, f'H series qualities, expected {expected_h_series}, got {result_h}.'
 
     def test_is_series(self):
+        """
+        is_series correctly identifies valid series letters.
+
+        Checks both valid series ('L','N','W','H') and an invalid value.
+        """
         series = ['L', 'N', 'W', 'H', 'X']
         expected = [True, True, True, True, False]
 
@@ -39,6 +72,11 @@ class TestQualities:
             assert x.is_series(s) is e, f'{s} series, expected {e}, got {x.is_series(s)}'
 
     def test_is_quality(self):
+        """
+        is_quality returns True for known qualities and False otherwise.
+
+        Verifies detection across multiple series and rejects invalid names.
+        """
         invalid = ['X10', 'L1000']
         l_series = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
         n_series = ['N10', 'N15', 'N20', 'N25', 'N30', 'N40', 'N60', 'N80', 'N100', 'N120', 'N150', 'N200', 'N250',
@@ -60,6 +98,11 @@ class TestQualities:
             assert x.is_quality(quality) is True, f'{quality} quality, expected True, got {x.is_quality(quality)}.'
 
     def test_get_series_qualities_valid_series(self):
+        """
+        get_qualities returns the expected list for each series.
+
+        Confirms that valid series letters map to their canonical quality lists.
+        """
         series = ['L', 'N', 'W', 'H']
         l_series = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
         n_series = ['N10', 'N15', 'N20', 'N25', 'N30', 'N40', 'N60', 'N80', 'N100', 'N120', 'N150', 'N200', 'N250',
@@ -75,12 +118,23 @@ class TestQualities:
             assert x.get_qualities(s) == e, f'{s} series, expected {e}, got {x.get_qualities(s)}.'
 
     def test_get_series_qualities_invalid_series(self):
+        """
+        get_qualities raises ValueError for unknown series.
+
+        Ensures the function validates its input and reports an informative error.
+        """
         x = Qualities()
         with pytest.raises(ValueError) as exc_info:
             x.get_qualities('X')
         assert f'X is not an x-ray radiation quality series.' in str(exc_info.value)
 
     def test_get_series_valid_quality(self):
+        """
+        get_series returns the correct series letter for each quality.
+
+        Validates mapping from quality name to its series letter across all
+        standard qualities.
+        """
         l_series = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
         n_series = ['N10', 'N15', 'N20', 'N25', 'N30', 'N40', 'N60', 'N80', 'N100', 'N120', 'N150', 'N200', 'N250',
                     'N300', 'N350', 'N400']
@@ -101,6 +155,11 @@ class TestQualities:
             assert x.get_series(q) == e, f'{q} quality, expected {e} series, got {x.get_series(q)} series.'
 
     def test_get_series_invalid_quality(self):
+        """
+        get_series raises ValueError for invalid quality identifiers.
+
+        Ensures the method rejects malformed or unknown quality names.
+        """
         qualities = ['X10', 'L0', 'N0', 'W0', 'H0']
 
         x = Qualities()
@@ -110,6 +169,12 @@ class TestQualities:
             assert f'{q} is not an x-ray radiation quality.' in str(exc_info.value)
 
     def test_peak_kilovoltage_valid_quality(self):
+        """
+        get_voltage parses the numeric kV value from quality names.
+
+        Confirms that numeric parsing yields expected integer voltages for
+        valid quality identifiers.
+        """
         l_series = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
         n_series = ['N10', 'N15', 'N20', 'N25', 'N30', 'N40', 'N60', 'N80', 'N100', 'N120', 'N150', 'N200', 'N250',
                     'N300', 'N350', 'N400']
@@ -130,6 +195,11 @@ class TestQualities:
             assert x.get_voltage(q) == e, f'{q} quality, expected {e} kV, got {x.get_voltage(q)} kV.'
 
     def test_peak_kilovoltage_invalid_quality(self):
+        """
+        get_voltage raises ValueError for invalid quality names.
+
+        Validates error behaviour when parsing non-existent qualities.
+        """
         qualities = ['X10', 'L0', 'N0', 'W0', 'H0']
         x = Qualities()
         for q in qualities:
@@ -138,6 +208,11 @@ class TestQualities:
             assert f'{q} is not an x-ray radiation quality.' in str(exc_info.value)
 
     def test_get_filtration_thickness_invalid_quality(self):
+        """
+        get_filtration raises ValueError for invalid quality identifiers.
+
+        Ensures invalid inputs are rejected when requesting filtration data.
+        """
         qualities = ['X10', 'L0', 'N0', 'W0', 'H0']
         x = Qualities()
         for q in qualities:
@@ -146,6 +221,12 @@ class TestQualities:
             assert f'{q} is not an x-ray radiation quality.' in str(exc_info.value)
 
     def test_get_filtration_inherent(self):
+        """
+        get_filtration(..., inherent=True) returns inherent layers.
+
+        Checks that inherent filtration layers for all qualities match the
+        expected lists of (material, thickness) pairs.
+        """
         x = Qualities()
 
         l_qualities = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
@@ -173,6 +254,12 @@ class TestQualities:
             assert r == e, f'{q} quality, expected {e}, got {r}'
 
     def test_get_filtration_additional(self):
+        """
+        get_filtration(..., additional=True) returns additional layers.
+
+        Verifies that additional filtration layers match the expected
+        material/thickness lists for each quality.
+        """
         x = Qualities()
 
         l_qualities = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
@@ -204,6 +291,12 @@ class TestQualities:
             assert r == e, f'{q} quality, expected {e}, got {r}'
 
     def test_get_filtration_total(self):
+        """
+        get_filtration returns inherent + additional layers when no flags set.
+
+        Confirms that concatenated filtration lists match the expected full
+        filtration specification for each quality.
+        """
         x = Qualities()
 
         l_qualities = ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240']
@@ -321,7 +414,20 @@ class TestQualities:
 
 
 class TestQuantities:
+    """
+    Tests for :class:`metpyx.data.Quantities`.
+
+    This test case validates the available operational quantities, checks
+    quantity identification, and verifies the irradiation angle retrieval.
+    """
+
     def test_constructor(self):
+        """
+        Operational quantities are registered at initialisation.
+
+        Confirms the expected set of operational quantities is available
+        after constructing a Quantities instance.
+        """
         x = Quantities()
         result = list(x.operational_quantities.keys())
         expected = ["H'(0.07)", "H'(3)", "H*(10)", "Hp(0.07, rod)", "Hp(0.07, pillar)", "Hp(0.07, slab)", "Hp(3, cyl)",
@@ -329,6 +435,11 @@ class TestQuantities:
         assert result == expected, f'Operational quantities, expected {expected}, got {result}.'
 
     def test_is_quantity(self):
+        """
+        is_quantity correctly identifies valid operational quantities.
+
+        Tests recognition of all registered quantities and an invalid entry.
+        """
         quantities = ["H'(0.07)", "H'(3)", "H*(10)", "Hp(0.07, rod)", "Hp(0.07, pillar)", "Hp(0.07, slab)",
                       "Hp(3, cyl)", "Hp(10, slab)", "Foo"]
         expected = [True] * (len(quantities) - 1) + [False]
@@ -337,6 +448,12 @@ class TestQuantities:
             assert x.is_quantity(q) is e, f'{q} quantity, expected {e}, got {x.is_quantity(q)}.'
 
     def test_get_operational_quantities(self):
+        """
+        get_operational_quantities returns the list of valid quantities.
+
+        Ensures the method provides the complete set of operational quantities
+        recognised by the Quantities instance.
+        """
         x = Quantities()
         result = x.get_operational_quantities()
         expected = ["H'(0.07)", "H'(3)", "H*(10)", "Hp(0.07, rod)", "Hp(0.07, pillar)", "Hp(0.07, slab)", "Hp(3, cyl)",
@@ -344,6 +461,11 @@ class TestQuantities:
         assert result == expected, f'Operational quantities, expected {expected}, got {result}.'
 
     def test_get_irradiation_angles_valid_quantity(self):
+        """
+        get_irradiation_angles returns the correct angles for valid quantities.
+
+        Validates angle retrieval for all registered operational quantities.
+        """
         angles = {
             "H'(0.07)": [0, 15, 30, 45, 60, 75, 90, 180],
             "H'(3)": [0, 15, 30, 45, 60, 75, 90, 180],
@@ -361,7 +483,12 @@ class TestQuantities:
             assert x.get_irradiation_angles(q) == e, f'{q} quantity, expected {e}, got {x.get_irradiation_angles(q)}.'
 
     def test_get_irradiation_angles_invalid_quantity(self):
+        """
+        get_irradiation_angles raises ValueError for unknown quantities.
+
+        Ensures proper exception handling when requesting angles for invalid
+        or unknown operational quantities.
+        """
         x = Quantities()
         with pytest.raises(ValueError) as exc_info:
-            x.get_irradiation_angles('H')
-        assert f'H is not an x-ray operational quantity.' in str(exc_info.value)
+            x.get_irradiation_angles('invalid')

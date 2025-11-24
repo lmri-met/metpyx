@@ -1,4 +1,21 @@
-# TODO: Add module docstring
+"""Tests for metpyx.simulation
+
+Unit tests for the :mod:`metpyx.simulation` module, focused on the
+`SimulatedSpectrum` helper which constructs spectra via :mod:`spekpy`.
+
+The tests in this module exercise the supported initialization modes
+(quality-based lookup and explicit voltage-based construction), error
+handling for invalid or conflicting arguments, and the correct forwarding
+of spectral arrays from :mod:`spekpy` into :class:`metpyx.spectrum.Spectrum`.
+
+Notes
+-----
+- These tests rely on the external package :mod:`spekpy` to construct
+  reference spectra. In CI environments you may prefer to monkeypatch
+  or stub :mod:`spekpy` to avoid coupling to the external library.
+- Each test is intentionally focused and deterministic so failures are
+  easy to diagnose.
+"""
 import numpy as np
 import pytest
 from spekpy import Spek
