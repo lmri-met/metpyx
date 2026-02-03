@@ -4,9 +4,9 @@ from data.qualities import Qualities
 
 
 class TestQualities:
-    def test_init(self):
+    def test_get_all_series(self):
         q = Qualities()
-        assert q.series == ['L', 'N', 'W', 'H']
+        assert q.get_all_series() == ['L', 'N', 'W', 'H']
 
     def test_get_all_qualities(self):
         q = Qualities()

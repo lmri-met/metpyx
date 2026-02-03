@@ -24,7 +24,7 @@ class Qualities:
     series values and raise :class:`ValueError` for unknown inputs.
     """
     # Radiation quality series
-    SERIES = {
+    _SERIES = {
         'L': ['L10', 'L20', 'L30', 'L35', 'L55', 'L70', 'L100', 'L125', 'L170', 'L210', 'L240'],
         'N': ['N10', 'N15', 'N20', 'N25', 'N30', 'N40', 'N60', 'N80', 'N100', 'N120', 'N150', 'N200', 'N250', 'N300',
               'N350', 'N400'],
@@ -32,7 +32,7 @@ class Qualities:
         'H': ['H10', 'H20', 'H30', 'H40', 'H60', 'H80', 'H100', 'H150', 'H200', 'H250', 'H280', 'H300', 'H350', 'H400']
     }
     # Inherent filtration thickness for radiation qualities
-    INHERENT_FILTRATION = {
+    _INHERENT_FILTRATION = {
         'L': {
             'L10':  {'Be': 1},
             'L20':  {'Be': 1},
@@ -93,7 +93,7 @@ class Qualities:
         }
     }
     # Additional filtration thickness for radiation qualities
-    ADDITIONAL_FILTRATION = {
+    _ADDITIONAL_FILTRATION = {
         'L': {
             'L10': {'Al': 0.3},
             'L20': {'Al': 2},
@@ -160,7 +160,9 @@ class Qualities:
 
         Sets the ``series`` attribute to the list of available series keys.
         """
-        self.series = list(self.SERIES.keys())
+        self.series = dict(self._SERIES)
+        self.inherent_filtration = dict(self._INHERENT_FILTRATION)
+        self.additional_filtration = dict(self._ADDITIONAL_FILTRATION)
 
     def is_series(self, series):
         """
@@ -194,6 +196,17 @@ class Qualities:
         """
         return quality in self.get_all_qualities()
 
+    def get_all_series(self):
+        """
+        Return a list of all available series codes.
+
+        Returns
+        -------
+        list of str
+            All defined series codes (e.g. ['L', 'N', 'W', 'H']).
+        """
+        return list(self.series.keys())
+
     def get_all_qualities(self):
         """
         Return a flat list of all quality names across series.
@@ -205,7 +218,7 @@ class Qualities:
         """
         all_qualities = []
         for series in self.series:
-            all_qualities.extend(self.SERIES[series])
+            all_qualities.extend(self.series[series])
         return all_qualities
 
     def get_qualities(self, series):
@@ -228,7 +241,7 @@ class Qualities:
             If the provided series is not recognized.
         """
         if self.is_series(series):
-            return self.SERIES[series]
+            return self.series[series]
         else:
             raise ValueError(f'{series} is not an x-ray radiation quality series.')
 
@@ -310,8 +323,8 @@ class Qualities:
         """
         if self.is_quality(quality):
             series = self.get_series(quality)
-            inherent_filtration = dict(self.INHERENT_FILTRATION[series][quality])
-            additional_filtration = dict(self.ADDITIONAL_FILTRATION[series][quality])
+            inherent_filtration = dict(self.inherent_filtration[series][quality])
+            additional_filtration = dict(self.additional_filtration[series][quality])
 
             if inherent and not additional:
                 return inherent_filtration
