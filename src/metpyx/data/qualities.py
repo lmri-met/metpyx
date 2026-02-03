@@ -3,25 +3,34 @@ class Qualities:
     Helper and lookup for x-ray radiation qualities and their filtrations.
 
     This class provides constants and convenience methods for working with
-    predefined x-ray radiation quality series (L, N, W, H), their inherent
-    filtration and additional filtration materials and thicknesses.
+    predefined x-ray radiation quality series (L, N, W, H) and their filtration
+    specifications.
 
     Attributes
     ----------
-    SERIES : dict
-        Mapping of series code (e.g. 'L') to list of quality names (e.g. 'L10').
-    INHERENT_FILTRATION : dict
-        Mapping of series -> quality -> inherent filtration materials/thickness.
-    ADDITIONAL_FILTRATION : dict
-        Mapping of series -> quality -> additional filtration materials/thickness.
-    series : list
-        Instance attribute set in :py:meth:`__init__` containing available series keys.
+    Private module-level constants
+    - `_SERIES` : dict
+        Mapping of series code (e.g. 'L') to list of quality names (e.g. ['L10']).
+    - `_INHERENT_FILTRATION` : dict
+        Mapping of series -> quality -> inherent filtration (material -> thickness).
+    - `_ADDITIONAL_FILTRATION` : dict
+        Mapping of series -> quality -> additional filtration (material -> thickness).
+
+    Public instance attributes (set in :py:meth:`__init__`)
+    - `series` : dict
+        Shallow copy of `_SERIES` (mapping series code -> list of quality names).
+    - `inherent_filtration` : dict
+        Shallow copy of `_INHERENT_FILTRATION` (series -> quality -> {material: thickness}).
+    - `additional_filtration` : dict
+        Shallow copy of `_ADDITIONAL_FILTRATION` (series -> quality -> {material: thickness}).
 
     Notes
     -----
     Filtration values are returned as dictionaries mapping material (str) to
-    thickness (float or int). The class methods validate provided quality and
-    series values and raise :class:`ValueError` for unknown inputs.
+    thickness (float or int). Methods that return filtration data return copies
+    so callers may mutate the result without altering module-level data. The
+    class methods validate provided quality and series values and raise
+    :class:`ValueError` for unknown inputs.
     """
     # Radiation quality series
     _SERIES = {
@@ -158,7 +167,12 @@ class Qualities:
         """
         Initialize a Qualities instance.
 
-        Sets the ``series`` attribute to the list of available series keys.
+        Sets the public instance attributes `series`, `inherent_filtration` and
+        `additional_filtration` to shallow copies of the corresponding module-
+        level private constants (`_SERIES`, `_INHERENT_FILTRATION`, and
+        `_ADDITIONAL_FILTRATION`). Callers should treat these as read-only
+        views of the canonical data; methods that return filtration dictionaries
+        also return copies to avoid accidental mutation of module data.
         """
         self.series = dict(self._SERIES)
         self.inherent_filtration = dict(self._INHERENT_FILTRATION)
@@ -233,7 +247,9 @@ class Qualities:
         Returns
         -------
         list of str
-            Quality names belonging to the requested series.
+            Quality names belonging to the requested series. This list is the
+            internal list stored in the instance's `series` mapping; callers
+            should treat it as read-only (do not mutate the returned list).
 
         Raises
         ------
@@ -320,6 +336,11 @@ class Qualities:
         ------
         ValueError
             If the provided quality is not recognized.
+
+        Notes
+        -----
+        Returned filtration dictionaries are copies; mutating them does not
+        affect the module-level data.
         """
         if self.is_quality(quality):
             series = self.get_series(quality)
