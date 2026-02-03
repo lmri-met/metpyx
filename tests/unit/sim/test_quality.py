@@ -1,7 +1,7 @@
 import pytest
 import spekpy as sp
 
-from metpyx.sim.sim import Quality
+from metpyx.sim.quality import Quality
 
 
 @pytest.fixture(scope="module")
