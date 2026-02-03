@@ -1,6 +1,6 @@
 import pytest
 
-from data.qualities import Qualities
+from metpyx.data.qualities import Qualities
 
 
 class TestQualities:

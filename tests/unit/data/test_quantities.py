@@ -1,6 +1,6 @@
 import pytest
 
-from data.quantities import OperationalQuantities
+from metpyx.data.quantities import OperationalQuantities
 
 
 class TestNoInputMethods:
