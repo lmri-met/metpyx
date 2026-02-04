@@ -2,7 +2,7 @@ from metpyx.data.qualities import Qualities
 from metpyx.data.quantities import OperationalQuantities
 
 
-class TestQualities:
+class TestQualitiesValues:
     def test_all_series(self):
         q = Qualities()
         assert q.get_all_series() == ['L', 'N', 'W', 'H']
@@ -355,7 +355,7 @@ class TestQualities:
         assert q.get_filtration('H400') == {'Al': 4, 'Cu': 4.7}
 
 
-class TestNoInputMethods:
+class TestQuantitiesValues:
     def test_all_quantities(self):
         q = OperationalQuantities()
         quantities = ['h_prime_07', 'h_prime_3', 'h_star_10', 'H_p_07_rod', 'H_p_07_pill', 'H_p_07_slab', 'H_p_3_cyl',
@@ -368,8 +368,6 @@ class TestNoInputMethods:
                       'Hp(3, cyl)', 'Hp(10, slab)']
         assert q.get_all_quantities(symbol=True) == quantities
 
-
-class TestValidInputs:
     def test_valid_quantities(self):
         q = OperationalQuantities()
         assert q.is_quantity('h_prime_07') == True
