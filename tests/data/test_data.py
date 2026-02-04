@@ -3,6 +3,12 @@ import pytest
 from metpyx.data.qualities import Qualities
 from metpyx.data.quantities import OperationalQuantities
 
+# Add tests for Coefficient class:
+# - get_from_data(): raises FileNotFoundError
+# - get_from_user(): return energies and values from user file; raises FileNotFoundError
+# - get_mu_tr_over_rho_air(): if source is custom; raises ValueError for invalid source; raises ValueError for invalid custom arguments
+# - get_h_k(): raise ValueError for invalid (quantity, angle) combinations; if source is custom; raises ValueError for invalid source
+
 
 class TestQualitiesInvalidInputs:
     def test_is_series_invalid_series(self):
