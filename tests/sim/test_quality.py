@@ -28,3 +28,6 @@ class TestQualityConsistency:
         assert quality.get_hvl2() == spek.get_hvl2()
         assert quality.get_hvl1(matl="Cu") == spek.get_hvl1(matl="Cu")
         assert quality.get_hvl2(matl="Cu") == spek.get_hvl2(matl="Cu")
+
+    def test_get_hk_mean(self):
+        pass
