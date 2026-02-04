@@ -1,3 +1,10 @@
+# Runtime dependencies
+numpy
+scipy
+pandas
+spekpy == 2.0.13 # Specific version for compatibility
+
 # Testing frameworks
 pytest
 pytest-cov
+
