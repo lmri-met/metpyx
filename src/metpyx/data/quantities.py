@@ -40,35 +40,35 @@ class OperationalQuantities:
             'phantom': None,
             'angles': [0]
         },
-        'H_p_07_rod': {
+        'h_p_07_rod': {
             'symbol': "Hp(0.07, rod)",
             'type': 'personal',
             'depth': 0.07,
             'phantom': 'rod',
             'angles': [0]
         },
-        'H_p_07_pill': {
+        'h_p_07_pill': {
             'symbol': "Hp(0.07, pillar)",
             'type': 'personal',
             'depth': 0.07,
             'phantom': 'pillar',
             'angles': [0]
         },
-        'H_p_07_slab': {
+        'h_p_07_slab': {
             'symbol': "Hp(0.07, slab)",
             'type': 'personal',
             'depth': 0.07,
             'phantom': 'slab',
             'angles': [0, 15, 30, 45, 60, 75]
         },
-        'H_p_3_cyl': {
+        'h_p_3_cyl': {
             'symbol': "Hp(3, cyl)",
             'type': 'personal',
             'depth': 3,
             'phantom': 'cylinder',
             'angles': [0, 15, 30, 45, 60, 75, 90]
         },
-        'H_p_10_slab': {
+        'h_p_10_slab': {
             'symbol': "Hp(10, slab)",
             'type': 'personal',
             'depth': 10,
