@@ -1,8 +1,11 @@
+# Verification of MetPyX numerical values against reference data
 import pytest
 import spekpy as sp
 
 from metpyx.sim.quality import Quality
 
+
+# Fixtures
 
 @pytest.fixture(scope="module")
 def quality():
@@ -14,6 +17,19 @@ def spek():
     s = sp.Spek(kvp=60)
     s.multi_filter([["Al", 4.0], ["Cu", 0.6]])
     return s
+
+
+# Data subpackage
+
+class TestDataValues:
+    pass
+
+
+# Simulation subpackage
+
+class TestQualitySimulationValues:
+    pass
+
 
 class TestQualityConsistency:
     def test_attributes(self, quality):
