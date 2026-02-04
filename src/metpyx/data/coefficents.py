@@ -9,14 +9,17 @@ class Coefficients:
     """
     Loader for coefficient tables with configuration stored as class constants.
 
-    Class constants:
-    - MU_TR: configuration for mu_tr/ρ tables.
-    - H_K: configuration for h_K tables.
+    Class attributes
+    ----------
+    MU_TR : dict
+        Configuration for mu_tr/ρ tables (package, default source, and sources config).
+    H_K : dict
+        Configuration for h_K tables (package, default source, and sources config).
 
-    Instance attributes:
-    - quantities: OperationalQuantities instance used for validation.
-    - mu_tr_source: selected default source for mu_tr/ρ.
-    - h_k_source: selected default source for h_K.
+    Attributes
+    ----------
+    quantities : OperationalQuantities
+        OperationalQuantities instance used for validation.
     """
 
     MU_TR = {
@@ -43,10 +46,39 @@ class Coefficients:
     }
 
     def __init__(self):
+        """
+        Initialize Coefficients.
+
+        Initializes the OperationalQuantities instance used for validation.
+        """
         self.quantities = OperationalQuantities()
 
     @staticmethod
     def get_from_data(pkg, file_or_parts, energy_col, value_col):
+        """
+        Load coefficient data from package resources.
+
+        Parameters
+        ----------
+        pkg : str
+            Package name containing the data files.
+        file_or_parts : str or sequence
+            File name or sequence of path parts inside the package.
+        energy_col : str
+            Column name for energy values in the CSV.
+        value_col : str
+            Column name for coefficient values in the CSV.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Tuple of (energies, values) as NumPy arrays.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the requested resource cannot be loaded or parsed.
+        """
         try:
             if isinstance(file_or_parts, (list, tuple)):
                 data_file = resources.files(pkg).joinpath(*file_or_parts)
@@ -63,6 +95,28 @@ class Coefficients:
 
     @staticmethod
     def get_from_user(file_path, energy_col, value_col):
+        """
+        Load coefficient data from a user-provided CSV file.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the user CSV file.
+        energy_col : str
+            Column name for energy values in the CSV.
+        value_col : str
+            Column name for coefficient values in the CSV.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Tuple of (energies, values) as NumPy arrays.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the file cannot be read or parsed.
+        """
         try:
             df = pd.read_csv(file_path, encoding="utf-8")
         except Exception as exc:
@@ -75,6 +129,29 @@ class Coefficients:
     def get_mu_tr_over_rho_air(self, source=None, file_path=None, energy_col=None, value_col=None):
         """
         Retrieve mass energy transfer coefficients to air (keV, cm²/g).
+
+        Parameters
+        ----------
+        source : str, optional
+            Source key from MU_TR sources or `'custom'`. Defaults to the configured default.
+        file_path : str, optional
+            Path to a user CSV file when `source` is `'custom'`.
+        energy_col : str, optional
+            Column name for energy values when `source` is `'custom'`.
+        value_col : str, optional
+            Column name for coefficient values when `source` is `'custom'`.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Tuple of (energies, values) as NumPy arrays.
+
+        Raises
+        ------
+        ValueError
+            If `source` is `'custom'` but required parameters are missing, or if `source` is invalid.
+        FileNotFoundError
+            If the selected data file cannot be loaded.
         """
         # Set default source if none provided
         source = self.MU_TR["default"] if source is None else source
@@ -111,6 +188,33 @@ class Coefficients:
     def get_h_k(self, source=None, quantity=None, angle=None, file_path=None, energy_col=None, value_col=None):
         """
         Retrieve air kerma to dose conversion coefficients (keV, Sv/Gy).
+
+        Parameters
+        ----------
+        source : str, optional
+            Source key from H_K sources or `'custom'`. Defaults to the configured default.
+        quantity : str, optional
+            Operational quantity name required for predefined sources.
+        angle : int or float, optional
+            Angle in degrees required for predefined sources.
+        file_path : str, optional
+            Path to a user CSV file when `source` is `'custom'`.
+        energy_col : str, optional
+            Column name for energy values when `source` is `'custom'`.
+        value_col : str, optional
+            Column name for coefficient values when `source` is `'custom'`.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Tuple of (energies, values) as NumPy arrays.
+
+        Raises
+        ------
+        ValueError
+            If the requested quantity/angle is invalid for predefined sources, or if `source` is `'custom'` but required parameters are missing.
+        FileNotFoundError
+            If the selected data file cannot be loaded.
         """
         # Set default source if none provided
         source = self.H_K["default"] if source is None else source
