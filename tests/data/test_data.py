@@ -1,13 +1,8 @@
 import pytest
 
+from metpyx.data.coefficents import Coefficients
 from metpyx.data.qualities import Qualities
 from metpyx.data.quantities import OperationalQuantities
-
-# Add tests for Coefficient class:
-# - get_from_data(): raises FileNotFoundError
-# - get_from_user(): return energies and values from user file; raises FileNotFoundError
-# - get_mu_tr_over_rho_air(): if source is custom; raises ValueError for invalid source; raises ValueError for invalid custom arguments
-# - get_h_k(): raise ValueError for invalid (quantity, angle) combinations; if source is custom; raises ValueError for invalid source
 
 
 class TestQualitiesInvalidInputs:
@@ -66,3 +61,29 @@ class TestQuantityInvalidInputs:
         with pytest.raises(ValueError) as exc_info:
             q.get_quantity('X')
         assert f'X is not an x-ray operational quantity.' in str(exc_info.value)
+
+
+class TestCoefficientsInvalidInputs:
+    def test_get_mu_tr_over_rho_air_invalid_source(self):
+        q = Coefficients()
+        with pytest.raises(ValueError) as exc_info:
+            q.get_mu_tr_over_rho_air(source='invalid_source')
+        assert f"Source must be one of ['pene_2018']. Found: invalid_source" in str(exc_info.value)
+
+    def test_get_h_k_invalid_source(self):
+        q = Coefficients()
+        with pytest.raises(ValueError) as exc_info:
+            q.get_h_k('h_star_10', 0, source='invalid_source')
+        assert f"Source must be one of ['cmi_2025']. Found: invalid_source" in str(exc_info.value)
+
+    def test_get_h_k_invalid_quantity(self):
+        q = Coefficients()
+        with pytest.raises(ValueError) as exc_info:
+            q.get_h_k('x', 0)
+        assert f'Quantity x at 0 degrees is not in predefined operational quantities.' in str(exc_info.value)
+
+    def test_get_h_k_invalid_angle(self):
+        q = Coefficients()
+        with pytest.raises(ValueError) as exc_info:
+            q.get_h_k('h_star_10', 300)
+        assert f'Quantity h_star_10 at 300 degrees is not in predefined operational quantities.' in str(exc_info.value)
