@@ -5,7 +5,7 @@ import spekpy as sp
 from metpyx.data import Coefficients
 from metpyx.data import OperationalQuantities
 from metpyx.data import Qualities
-from metpyx.sim.quality import Quality
+from metpyx.sim import Quality
 
 
 # Fixtures
@@ -120,26 +120,4 @@ class TestDataValues:
         assert list(h_k[0]) == cmi_2025_energies_h_star_10_0
         assert list(h_k[1]) == cmi_2025_values_h_star_10_0
 
-
 # Simulation subpackage
-
-class TestSimulationValues:
-    pass
-#
-#
-# class TestQualityConsistency:
-#     def test_attributes(self, quality):
-#         assert quality.quality == "N60"
-#         assert quality.voltage == 60
-#         assert quality.total_filtration == {"Al": 4, "Cu": 0.6}
-#
-#     def test_spekpy_integral_quantities(self, quality, spek):
-#         assert quality.get_emean() == spek.get_emean()
-#         assert quality.get_kerma() == spek.get_kerma()
-#         assert quality.get_hvl1() == spek.get_hvl1()
-#         assert quality.get_hvl2() == spek.get_hvl2()
-#         assert quality.get_hvl1(matl="Cu") == spek.get_hvl1(matl="Cu")
-#         assert quality.get_hvl2(matl="Cu") == spek.get_hvl2(matl="Cu")
-#
-#     def test_get_hk_mean(self):
-#         pass
