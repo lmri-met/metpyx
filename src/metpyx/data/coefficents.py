@@ -93,40 +93,7 @@ class Coefficients:
         values = df[value_col].to_numpy()
         return energies, values
 
-    @staticmethod
-    def get_from_user(file_path, energy_col, value_col):
-        """
-        Load coefficient data from a user-provided CSV file.
-
-        Parameters
-        ----------
-        file_path : str
-            Path to the user CSV file.
-        energy_col : str
-            Column name for energy values in the CSV.
-        value_col : str
-            Column name for coefficient values in the CSV.
-
-        Returns
-        -------
-        tuple[numpy.ndarray, numpy.ndarray]
-            Tuple of (energies, values) as NumPy arrays.
-
-        Raises
-        ------
-        FileNotFoundError
-            If the file cannot be read or parsed.
-        """
-        try:
-            df = pd.read_csv(file_path, encoding="utf-8")
-        except Exception as exc:
-            raise FileNotFoundError(f"Could not load '{file_path}':\n{exc}") from exc
-
-        energies = df[energy_col].to_numpy()
-        values = df[value_col].to_numpy()
-        return energies, values
-
-    def get_mu_tr_over_rho_air(self, source=None, file_path=None, energy_col=None, value_col=None):
+    def get_mu_tr_over_rho_air(self, source=None):
         """
         Retrieve mass energy transfer coefficients to air (keV, cm²/g).
 
@@ -134,12 +101,6 @@ class Coefficients:
         ----------
         source : str, optional
             Source key from MU_TR sources or `'custom'`. Defaults to the configured default.
-        file_path : str, optional
-            Path to a user CSV file when `source` is `'custom'`.
-        energy_col : str, optional
-            Column name for energy values when `source` is `'custom'`.
-        value_col : str, optional
-            Column name for coefficient values when `source` is `'custom'`.
 
         Returns
         -------
@@ -149,9 +110,7 @@ class Coefficients:
         Raises
         ------
         ValueError
-            If `source` is `'custom'` but required parameters are missing, or if `source` is invalid.
-        FileNotFoundError
-            If the selected data file cannot be loaded.
+            If `source` is invalid.
         """
         # Set default source if none provided
         source = self.MU_TR["default"] if source is None else source
@@ -168,41 +127,25 @@ class Coefficients:
             # Load data
             energies, values = self.get_from_data(pkg, file, energy_col, value_col)
 
-        # If source is 'custom', load data from user file
-        elif source == 'custom':
-
-            # Validate required parameters
-            if file_path is None or energy_col is None or value_col is None:
-                raise ValueError("For 'custom' source, file_path, energy_col, and value_col must be provided.")
-
-            # Load data
-            energies, values = self.get_from_user(file_path, energy_col, value_col)
-
         # Invalid source
         else:
             allowed = list(self.MU_TR["sources"].keys())
-            raise ValueError(f"Source must be one of {allowed} or 'custom'. Found: {source}")
+            raise ValueError(f"Source must be one of {allowed}. Found: {source}")
 
         return energies, values
 
-    def get_h_k(self, source=None, quantity=None, angle=None, file_path=None, energy_col=None, value_col=None):
+    def get_h_k(self, quantity, angle, source=None):
         """
         Retrieve air kerma to dose conversion coefficients (keV, Sv/Gy).
 
         Parameters
         ----------
+        quantity : str
+            Operational quantity name required for predefined sources.
+        angle : int or float
+            Angle in degrees required for predefined sources.
         source : str, optional
             Source key from H_K sources or `'custom'`. Defaults to the configured default.
-        quantity : str, optional
-            Operational quantity name required for predefined sources.
-        angle : int or float, optional
-            Angle in degrees required for predefined sources.
-        file_path : str, optional
-            Path to a user CSV file when `source` is `'custom'`.
-        energy_col : str, optional
-            Column name for energy values when `source` is `'custom'`.
-        value_col : str, optional
-            Column name for coefficient values when `source` is `'custom'`.
 
         Returns
         -------
@@ -212,9 +155,7 @@ class Coefficients:
         Raises
         ------
         ValueError
-            If the requested quantity/angle is invalid for predefined sources, or if `source` is `'custom'` but required parameters are missing.
-        FileNotFoundError
-            If the selected data file cannot be loaded.
+            If the requested quantity/angle is invalid for predefined sources.
         """
         # Set default source if none provided
         source = self.H_K["default"] if source is None else source
@@ -238,19 +179,9 @@ class Coefficients:
             # Load data
             energies, values = self.get_from_data(pkg, file_path_parts, energy_col, value_col)
 
-        # If source is 'custom', load data from user file
-        elif source == 'custom':
-
-            # Validate required parameters
-            if file_path is None or energy_col is None or value_col is None:
-                raise ValueError("For 'custom' source, file_path, energy_col, and value_col must be provided.")
-
-            # Load data
-            energies, values = self.get_from_user(file_path, energy_col, value_col)
-
         # Invalid source
         else:
             allowed = list(self.H_K["sources"].keys())
-            raise ValueError(f"Source must be one of {allowed} or 'custom'. Found: {source}")
+            raise ValueError(f"Source must be one of {allowed}. Found: {source}")
 
         return energies, values
