@@ -32,7 +32,7 @@ class Spectrum(Spek):
         """
         super().__init__(**spek_kwargs)
 
-    def get_hk_mean(self, quantity, angle):  # TODO: user provided coefficients option
+    def get_hk_mean(self, quantity, angle, mu_tr_over_rho_source=None, h_k_source=None):
         """Compute mean air kerma to dose conversion coefficient (Sv/Gy).
 
         Parameters
@@ -65,8 +65,8 @@ class Spectrum(Spek):
         spectrum_data = self.get_spectrum(diff=False)
         # Get coefficients from source
         c = Coefficients()
-        mu_tr_over_rho_data = c.get_mu_tr_over_rho_air()
-        h_k_data = c.get_h_k(quantity=quantity, angle=angle)
+        mu_tr_over_rho_data = c.get_mu_tr_over_rho_air(source=mu_tr_over_rho_source)
+        h_k_data = c.get_h_k(quantity, angle, source=h_k_source)
 
         # Unpack arrays
         energies = np.array(spectrum_data[0])
@@ -114,7 +114,7 @@ class Spectrum(Spek):
         h_k_mean_denominator = np.nansum(fluence * energies * mu_tr_over_rho)
         return h_k_mean_numerator / h_k_mean_denominator
 
-    def get_dose_equivalent(self, quantity, angle):  # TODO: user provided coefficients option
+    def get_dose_equivalent(self, quantity, angle):
         """Compute dose equivalent for a given operational quantity and irradiation angle (uSv).
 
         Parameters
