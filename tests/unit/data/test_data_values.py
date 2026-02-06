@@ -1,3 +1,4 @@
+# Verification of the values in the data classes, to ensure they are correct and consistent with the references.
 from metpyx.data.qualities import Qualities
 from metpyx.data.quantities import OperationalQuantities
 

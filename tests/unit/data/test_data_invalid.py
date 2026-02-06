@@ -1,3 +1,4 @@
+# Verifies that invalid inputs to data classes raise appropriate exceptions or return expected results.
 import pytest
 
 from metpyx.data.coefficents import Coefficients
@@ -54,7 +55,7 @@ class TestQuantityInvalidInputs:
 
     def test_is_quantity_angle_invalid_both(self):
         q = OperationalQuantities()
-        assert q.is_quantity_angle('x', '15') == False
+        assert q.is_quantity_angle('x', 300) == False
 
     def test_get_quantity_invalid_quantities(self):
         q = OperationalQuantities()
