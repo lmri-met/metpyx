@@ -206,30 +206,30 @@ class Quality(Spectrum):
 
         # Get distance from state and format filtration
         self.distance = self.state.spectrum_parameters.z
-        self.spek_filtration = self._format_filtration_for_spek(self.total_filtration, self.distance)
+        self.spek_filtration = format_filtration_for_spek(self.total_filtration, self.distance)
 
         # Apply filtration
         self.multi_filter(self.spek_filtration)
 
-    @staticmethod
-    def _format_filtration_for_spek(filtration, distance):
-        """
-        Format total filtration for :meth:`spekpy.Spek.multi_filter`.
 
-        Parameters
-        ----------
-        filtration : Mapping
-            Mapping of material name to thickness (mm), for example ``{"Al": 4, "Cu": 0.6}``.
+def format_filtration_for_spek(filtration, distance):
+    """
+    Format total filtration for :meth:`spekpy.Spek.multi_filter`.
 
-        Returns
-        -------
-        list
-            A list of ``[material, thickness]`` pairs suitable for passing to `spekpy.Spek.multi_filter`,
-            for example ``[["Al", 4.0], ["Cu", 0.6]]``.
-        """
-        total_filtration = [[str(material), float(thickness)] for material, thickness in filtration.items()]
-        # total_filtration_thickness = sum(filtration[1] for filtration in total_filtration)
-        # air_thickness = distance * 10 - total_filtration_thickness # Convert distance from cm to mm
-        air_thickness = distance * 10  # distance in cm, air thickness in mm
-        air_filtration = ["Air", air_thickness]
-        return total_filtration + [air_filtration]
+    Parameters
+    ----------
+    filtration : Mapping
+        Mapping of material name to thickness (mm), for example ``{"Al": 4, "Cu": 0.6}``.
+
+    Returns
+    -------
+    list
+        A list of ``[material, thickness]`` pairs suitable for passing to `spekpy.Spek.multi_filter`,
+        for example ``[["Al", 4.0], ["Cu", 0.6]]``.
+    """
+    total_filtration = [[str(material), float(thickness)] for material, thickness in filtration.items()]
+    # total_filtration_thickness = sum(filtration[1] for filtration in total_filtration)
+    # air_thickness = distance * 10 - total_filtration_thickness # Convert distance from cm to mm
+    air_thickness = distance * 10  # distance in cm, air thickness in mm
+    air_filtration = ["Air", air_thickness]
+    return total_filtration + [air_filtration]
