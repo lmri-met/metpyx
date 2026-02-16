@@ -1,4 +1,5 @@
 # Verification of the values in the data classes, to ensure they are correct and consistent with the references.
+from metpyx.data.densities import Densities
 from metpyx.data.qualities import Qualities
 from metpyx.data.quantities import OperationalQuantities
 
@@ -442,3 +443,19 @@ class TestQuantitiesValues:
         assert q.get_symbol('h_p_07_slab') == "Hp(0.07, slab)"
         assert q.get_symbol('h_p_3_cyl') == "Hp(3, cyl)"
         assert q.get_symbol('h_p_10_slab') == "Hp(10, slab)"
+
+
+class TestDensitiesValues:
+    def test_densities_nist(self):
+        d = Densities()
+        assert d.get_density("Al") == 2.699
+        assert d.get_density("Cu") == 8.960
+        assert d.get_density("Sn") == 7.310
+        assert d.get_density("Pb") == 11.35
+        assert d.get_density("Fe") == 7.874
+        assert d.get_density("Si") == 2.330
+        assert d.get_density("S") == 2.000
+        assert d.get_density("O") == 0.001332
+        assert d.get_density("Ni") == 8.902
+        assert d.get_density("Sb") == 6.691
+        assert d.get_density("Bi") == 9.747

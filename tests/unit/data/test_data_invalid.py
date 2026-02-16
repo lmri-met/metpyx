@@ -2,6 +2,7 @@
 import pytest
 
 from metpyx.data.coefficents import Coefficients
+from metpyx.data.densities import Densities
 from metpyx.data.qualities import Qualities
 from metpyx.data.quantities import OperationalQuantities
 
@@ -88,3 +89,17 @@ class TestCoefficientsInvalidInputs:
         with pytest.raises(ValueError) as exc_info:
             q.get_h_k('h_star_10', 300)
         assert f'Quantity h_star_10 at 300 degrees is not in predefined operational quantities.' in str(exc_info.value)
+
+
+class TestDensitiesInvalidInputs:
+    def test_get_density_invalid_source(self):
+        d = Densities()
+        with pytest.raises(ValueError) as exc_info:
+            d.get_density('air', source='invalid_source')
+        assert f"Source must be one of ['nist']. Found: invalid_source" in str(exc_info.value)
+
+    def test_get_density_invalid_material(self):
+        d = Densities()
+        with pytest.raises(ValueError) as exc_info:
+            d.get_density('invalid_material')
+        assert f"Material 'invalid_material' not found in densities source." in str(exc_info.value)
