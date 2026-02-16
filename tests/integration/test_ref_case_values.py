@@ -4,7 +4,7 @@ import pytest
 from metpyx.data import Coefficients
 from metpyx.data import OperationalQuantities
 from metpyx.data import Qualities
-from metpyx.sim import Spectrum, Quality
+from metpyx.sim import Spectrum, Quality, QualitySensitivity
 
 
 class TestDataValues:
@@ -247,3 +247,128 @@ class TestSimulationIntegralQuantitiesValues:
 
         # Dose equivalent
         assert mq.get_dose_equivalent('h_star_10', 0) == pytest.approx(ref_values['dose'])
+
+
+class TestSimulationQuantitiesSensitivityValues:
+    # Simulation subpackage
+    # Reference case for verification:
+    # - N60 radiation quality.
+    # - Anode angle of 20º.
+    # - H*(10) operational quantity at 0º irradiation angle.
+    # - mass energy transfer coefficients for air from PENELOPE 2018.
+    # - air kerma to dose conversion coefficients from CMI 2025.
+    # - measurement distance at 1 m.
+    # - air thickness equal to distance.
+    # - Deviation of 5% in tube voltage,
+    # - Deviation of 5% in additional filtration thickness
+    # - Deviation of 5% of Pb in additional filtration purity.
+
+    def test_perturbed_high_voltage_initialization(self):
+        q = QualitySensitivity('N60', 'tube_voltage', 5, th=20)
+
+        # Perturbation attributes
+        assert q.quality == 'N60'
+        assert q.parameter == 'tube_voltage'
+        assert q.deviation == 5
+        assert q.material is None
+        assert q.distance == 100
+
+        # Nominal parameters
+        assert q.nominal_params['tube_voltage'] == 60
+        assert q.nominal_params['inherent_filtration'] == {'Al': 4}
+        assert q.nominal_params['additional_filtration'] == {'Cu': 0.6}
+        assert q.nominal_params['total_filtration'] == {'Al': 4, 'Cu': 0.6}
+        assert q.nominal_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6], ["Air", 1000]]
+
+        # Perturbed parameters
+        assert q.perturbed_params['tube_voltage'] == 60 * 1.05  # +5%
+        assert q.perturbed_params['inherent_filtration'] == {'Al': 4}  # No change
+        assert q.perturbed_params['additional_filtration'] == {'Cu': 0.6}  # No change
+        assert q.perturbed_params['total_filtration'] == {'Al': 4, 'Cu': 0.6}  # No change
+        assert q.perturbed_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6], ["Air", 1000]]  # No change
+
+        # Nominal spectrum
+        assert q.nominal_spec.state.spectrum_parameters.z == 100
+        assert q.nominal_spec.state.model_parameters.th == 20
+        assert q.nominal_spec.state.model_parameters.kvp == 60
+        assert q.nominal_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Air", 1000)]
+
+        # Perturbed spectrum
+        assert q.perturbed_spec.state.spectrum_parameters.z == 100
+        assert q.perturbed_spec.state.model_parameters.th == 20
+        assert q.perturbed_spec.state.model_parameters.kvp == 60 * 1.05  # +5%
+        assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Air", 1000)]
+
+    def test_perturbed_additional_filtration_thickness_initialization(self):
+        q = QualitySensitivity("N60", 'additional_filtration_thickness', 5, th=20)
+
+        # Perturbation attributes
+        assert q.quality == 'N60'
+        assert q.parameter == 'additional_filtration_thickness'
+        assert q.deviation == 5
+        assert q.material is None
+        assert q.distance == 100
+
+        # Nominal parameters
+        assert q.nominal_params['tube_voltage'] == 60
+        assert q.nominal_params['inherent_filtration'] == {'Al': 4}
+        assert q.nominal_params['additional_filtration'] == {'Cu': 0.6}
+        assert q.nominal_params['total_filtration'] == {'Al': 4, 'Cu': 0.6}
+        assert q.nominal_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6], ["Air", 1000]]
+
+        # Perturbed parameters
+        assert q.perturbed_params['tube_voltage'] == 60  # No change
+        assert q.perturbed_params['inherent_filtration'] == {'Al': 4}  # No change
+        assert q.perturbed_params['additional_filtration'] == {'Cu': 0.6 * 1.05}  # +5%
+        assert q.perturbed_params['total_filtration'] == {'Al': 4, 'Cu': 0.6 * 1.05}  # +5% in additional
+        assert q.perturbed_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6 * 1.05], ["Air", 1000]]  # +5% in additional
+
+        # Nominal spectrum
+        assert q.nominal_spec.state.spectrum_parameters.z == 100
+        assert q.nominal_spec.state.model_parameters.th == 20
+        assert q.nominal_spec.state.model_parameters.kvp == 60
+        assert q.nominal_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Air", 1000)]
+
+        # Perturbed spectrum
+        assert q.perturbed_spec.state.spectrum_parameters.z == 100
+        assert q.perturbed_spec.state.model_parameters.th == 20
+        assert q.perturbed_spec.state.model_parameters.kvp == 60
+        assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6 * 1.05), ("Air", 1000)] # +5%
+
+    def test_perturbed_additional_filtration_purity_initialization(self):
+        q = QualitySensitivity("N60", 'additional_filtration_purity', 5, material='Pb', th=20)
+
+        # Perturbation attributes
+        assert q.quality == 'N60'
+        assert q.parameter == 'additional_filtration_purity'
+        assert q.deviation == 5
+        assert q.material == 'Pb'
+        assert q.distance == 100
+
+        pb_thick = 0.6*(0.05*8.96)/(0.95*11.35)
+
+        # Nominal parameters
+        assert q.nominal_params['tube_voltage'] == 60
+        assert q.nominal_params['inherent_filtration'] == {'Al': 4}
+        assert q.nominal_params['additional_filtration'] == {'Cu': 0.6}
+        assert q.nominal_params['total_filtration'] == {'Al': 4, 'Cu': 0.6}
+        assert q.nominal_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6], ["Air", 1000]]
+
+        # Perturbed parameters
+        assert q.perturbed_params['tube_voltage'] == 60  # No change
+        assert q.perturbed_params['inherent_filtration'] == {'Al': 4}  # No change
+        assert q.perturbed_params['additional_filtration'] == {'Cu': 0.6, 'Pb': pb_thick}  # +5%
+        assert q.perturbed_params['total_filtration'] == {'Al': 4, 'Cu': 0.6, 'Pb': pb_thick}  # +5% in additional
+        assert q.perturbed_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6], ["Pb", pb_thick], ["Air", 1000]]  # +5% in additional
+
+        # Nominal spectrum
+        assert q.nominal_spec.state.spectrum_parameters.z == 100
+        assert q.nominal_spec.state.model_parameters.th == 20
+        assert q.nominal_spec.state.model_parameters.kvp == 60
+        assert q.nominal_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Air", 1000)]
+
+        # Perturbed spectrum
+        assert q.perturbed_spec.state.spectrum_parameters.z == 100
+        assert q.perturbed_spec.state.model_parameters.th == 20
+        assert q.perturbed_spec.state.model_parameters.kvp == 60
+        assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Pb", pb_thick), ("Air", 1000)] # +5%
