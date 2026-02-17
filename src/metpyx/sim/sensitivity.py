@@ -1,6 +1,8 @@
+from copy import deepcopy
+
 from metpyx.data import Qualities, Densities
 from metpyx.sim import Spectrum, format_filtration_for_spek
-from copy import deepcopy
+
 
 class QualitySensitivity:
     """Sensitivity analysis for an x-ray radiation quality.
@@ -120,7 +122,7 @@ class QualitySensitivity:
         perturbed = self._initialize_spectrum_instance(self.perturbed_params, *args, **kwargs)
 
         # Store the nominal and perturbed filtration parameters formatted for spekpy
-        self.nominal_params['spek_filtration'] =nominal['spek_filtration']
+        self.nominal_params['spek_filtration'] = nominal['spek_filtration']
         self.perturbed_params['spek_filtration'] = perturbed['spek_filtration']
 
         # Store the nominal and perturbed Spectrum instances
@@ -169,7 +171,7 @@ class QualitySensitivity:
         # Add filtration to the Spectrum objects based on the nominal and perturbed parameters
         spek.multi_filter(spek_filtration)
 
-        return {'distance':distance, 'spek':spek, 'spek_filtration':spek_filtration}
+        return {'distance': distance, 'spek': spek, 'spek_filtration': spek_filtration}
 
     def _get_nominal_parameters(self):
         """Retrieve nominal parameters for the specified quality.
@@ -221,7 +223,7 @@ class QualitySensitivity:
         if self.parameter == "additional_filtration_purity":
             return self._perturb_additional_filtration_purity(perturbed)
 
-        return perturbed
+        return None # This line should never be reached due to the check in the constructor
 
     def _perturb_tube_voltage(self, perturbed):
         """Apply a percentage deviation to the tube high voltage.
@@ -342,6 +344,47 @@ class QualitySensitivity:
 
         return perturbed
 
+    def get_emean_dev(self, **kwargs):
+        # TODO: add numpy style docstring
+        nominal = self.nominal_spec.get_emean(**kwargs)
+        perturbed = self.perturbed_spec.get_emean(**kwargs)
+        percentage = abs(perturbed - nominal) / nominal * 100
+        return nominal, perturbed, percentage
+
+    def get_kerma_dev(self, **kwargs):
+        # TODO: add numpy style docstring
+        nominal = self.nominal_spec.get_kerma(**kwargs)
+        perturbed = self.perturbed_spec.get_kerma(**kwargs)
+        percentage = abs(perturbed - nominal) / nominal * 100
+        return nominal, perturbed, percentage
+
+    def get_hvl1_dev(self, **kwargs):
+        # TODO: add numpy style docstring
+        nominal = self.nominal_spec.get_hvl1(**kwargs)
+        perturbed = self.perturbed_spec.get_hvl1(**kwargs)
+        percentage = abs(perturbed - nominal) / nominal * 100
+        return nominal, perturbed, percentage
+
+    def get_hvl2_dev(self, **kwargs):
+        # TODO: add numpy style docstring
+        nominal = self.nominal_spec.get_hvl2(**kwargs)
+        perturbed = self.perturbed_spec.get_hvl2(**kwargs)
+        percentage = abs(perturbed - nominal) / nominal * 100
+        return nominal, perturbed, percentage
+
+    def get_hk_mean_dev(self, *args, **kwargs):
+        # TODO: add numpy style docstring
+        nominal = self.nominal_spec.get_hk_mean(*args, **kwargs)
+        perturbed = self.perturbed_spec.get_hk_mean(*args, **kwargs)
+        percentage = abs(perturbed - nominal) / nominal * 100
+        return nominal, perturbed, percentage
+
+    def get_dose_equivalent_dev(self, *args, **kwargs):
+        # TODO: add numpy style docstring
+        nominal = self.nominal_spec.get_dose_equivalent(*args, **kwargs)
+        perturbed = self.perturbed_spec.get_dose_equivalent(*args, **kwargs)
+        percentage = abs(perturbed - nominal) / nominal * 100
+        return nominal, perturbed, percentage
 
 
 def get_equivalent_filter(d_mat, p_imp, rho_mat, rho_imp):

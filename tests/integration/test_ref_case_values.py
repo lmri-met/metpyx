@@ -263,7 +263,38 @@ class TestSimulationQuantitiesSensitivityValues:
     # - Deviation of 5% in additional filtration thickness
     # - Deviation of 5% of Pb in additional filtration purity.
 
-    def test_perturbed_high_voltage_initialization(self):
+    @pytest.fixture()
+    def ref_values(self):
+        # See "verification_sim_sensitivity.ipynb" for details on how these values were obtained.
+        ref = {
+            'dev_fp': {'dose': (2.476446133301221, 1.8715090700109684, 24.42762857449447),
+                       'e_mean': (47.63300484905786, 48.23922934652791, 1.2726984144525062),
+                       'hk_mean': (1.5652667635344535, 1.580794312765024, 0.9920065762789478),
+                       'hvl1_al': (5.8582747051770605, 6.055532327046102, 3.3671623779390396),
+                       'hvl1_cu': (0.23236896040944352, 0.2435552947430159, 4.814039841578501),
+                       'hvl2_al': (6.196968255804022, 6.362159549870954, 2.6656792038948267),
+                       'hvl2_cu': (0.25978939890001607, 0.26944828513555114, 3.7179678140956165),
+                       'kerma': (1.5821240129760867, 1.1839042277027458, 25.169947615184817)},
+            'dev_ft': {'dose': (2.476446133301221, 2.2606833305345133, 8.712598261892555),
+                       'e_mean': (47.63300484905786, 47.84934225046291, 0.4541754233027941),
+                       'hk_mean': (1.5652667635344535, 1.5709539053877748, 0.3633337131927243),
+                       'hvl1_al': (5.8582747051770605, 5.929619001167139, 1.2178380082967142),
+                       'hvl1_cu': (0.23236896040944352, 0.23636978049671498, 1.7217532325409766),
+                       'hvl2_al': (6.196968255804022, 6.256185361212441, 0.9555818742972599),
+                       'hvl2_cu': (0.25978939890001607, 0.26321603063468924, 1.3190036811286363),
+                       'kerma': (1.5821240129760867, 1.439051345033886, 9.043075433326555)},
+            'dev_hv': {'dose': (2.476446133301221, 3.3211249547037083, 34.10850775407298),
+                       'e_mean': (47.63300484905786, 49.2164460260192, 3.324252127236218),
+                       'hk_mean': (1.5652667635344535, 1.5888688881461586, 1.5078659536864027),
+                       'hvl1_al': (5.8582747051770605, 6.179492360642627, 5.483144298127577),
+                       'hvl1_cu': (0.23236896040944352, 0.252298390275154, 8.576631676878879),
+                       'hvl2_al': (6.196968255804022, 6.55820997933427, 5.829329901632339),
+                       'hvl2_cu': (0.25978939890001607, 0.285587239706776, 9.930290041083873),
+                       'kerma': (1.5821240129760867, 2.0902448147113577, 32.11636999172144)}
+        }
+        return ref
+
+    def test_perturbed_high_voltage_initialization(self, ref_values):
         q = QualitySensitivity('N60', 'tube_voltage', 5, th=20)
 
         # Perturbation attributes
@@ -299,7 +330,19 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.perturbed_spec.state.model_parameters.kvp == 60 * 1.05  # +5%
         assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Air", 1000)]
 
-    def test_perturbed_additional_filtration_thickness_initialization(self):
+        # Integral quantities (not related to dose): (nominal, perturbed, % difference)
+        assert q.get_emean_dev() == pytest.approx(ref_values['dev_hv']['e_mean'])
+        assert q.get_kerma_dev() == pytest.approx(ref_values['dev_hv']['kerma'])
+        assert q.get_hvl1_dev() == pytest.approx(ref_values['dev_hv']['hvl1_al'])
+        assert q.get_hvl2_dev() == pytest.approx(ref_values['dev_hv']['hvl2_al'])
+        assert q.get_hvl1_dev(matl="Cu") == pytest.approx(ref_values['dev_hv']['hvl1_cu'])
+        assert q.get_hvl2_dev(matl="Cu") == pytest.approx(ref_values['dev_hv']['hvl2_cu'])
+
+        # Integral quantities (related to dose): (nominal, perturbed, % difference)
+        assert q.get_hk_mean_dev('h_star_10', 0) == pytest.approx(ref_values['dev_hv']['hk_mean'])
+        assert q.get_dose_equivalent_dev('h_star_10', 0) == pytest.approx(ref_values['dev_hv']['dose'])
+
+    def test_perturbed_additional_filtration_thickness_initialization(self, ref_values):
         q = QualitySensitivity("N60", 'additional_filtration_thickness', 5, th=20)
 
         # Perturbation attributes
@@ -321,7 +364,8 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.perturbed_params['inherent_filtration'] == {'Al': 4}  # No change
         assert q.perturbed_params['additional_filtration'] == {'Cu': 0.6 * 1.05}  # +5%
         assert q.perturbed_params['total_filtration'] == {'Al': 4, 'Cu': 0.6 * 1.05}  # +5% in additional
-        assert q.perturbed_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6 * 1.05], ["Air", 1000]]  # +5% in additional
+        assert q.perturbed_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6 * 1.05],
+                                                         ["Air", 1000]]  # +5% in additional
 
         # Nominal spectrum
         assert q.nominal_spec.state.spectrum_parameters.z == 100
@@ -333,9 +377,21 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.perturbed_spec.state.spectrum_parameters.z == 100
         assert q.perturbed_spec.state.model_parameters.th == 20
         assert q.perturbed_spec.state.model_parameters.kvp == 60
-        assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6 * 1.05), ("Air", 1000)] # +5%
+        assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6 * 1.05), ("Air", 1000)]  # +5%
 
-    def test_perturbed_additional_filtration_purity_initialization(self):
+        # Integral quantities (not related to dose): (nominal, perturbed, % difference)
+        assert q.get_emean_dev() == pytest.approx(ref_values['dev_ft']['e_mean'])
+        assert q.get_kerma_dev() == pytest.approx(ref_values['dev_ft']['kerma'])
+        assert q.get_hvl1_dev() == pytest.approx(ref_values['dev_ft']['hvl1_al'])
+        assert q.get_hvl2_dev() == pytest.approx(ref_values['dev_ft']['hvl2_al'])
+        assert q.get_hvl1_dev(matl="Cu") == pytest.approx(ref_values['dev_ft']['hvl1_cu'])
+        assert q.get_hvl2_dev(matl="Cu") == pytest.approx(ref_values['dev_ft']['hvl2_cu'])
+
+        # Integral quantities (related to dose): (nominal, perturbed, % difference)
+        assert q.get_hk_mean_dev('h_star_10', 0) == pytest.approx(ref_values['dev_ft']['hk_mean'])
+        assert q.get_dose_equivalent_dev('h_star_10', 0) == pytest.approx(ref_values['dev_ft']['dose'])
+
+    def test_perturbed_additional_filtration_purity_initialization(self, ref_values):
         q = QualitySensitivity("N60", 'additional_filtration_purity', 5, material='Pb', th=20)
 
         # Perturbation attributes
@@ -345,7 +401,7 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.material == 'Pb'
         assert q.distance == 100
 
-        pb_thick = 0.6*(0.05*8.96)/(0.95*11.35)
+        pb_thick = 0.6 * (0.05 * 8.96) / (0.95 * 11.35)
 
         # Nominal parameters
         assert q.nominal_params['tube_voltage'] == 60
@@ -359,7 +415,8 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.perturbed_params['inherent_filtration'] == {'Al': 4}  # No change
         assert q.perturbed_params['additional_filtration'] == {'Cu': 0.6, 'Pb': pb_thick}  # +5%
         assert q.perturbed_params['total_filtration'] == {'Al': 4, 'Cu': 0.6, 'Pb': pb_thick}  # +5% in additional
-        assert q.perturbed_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6], ["Pb", pb_thick], ["Air", 1000]]  # +5% in additional
+        assert q.perturbed_params['spek_filtration'] == [["Al", 4.0], ["Cu", 0.6], ["Pb", pb_thick],
+                                                         ["Air", 1000]]  # +5% in additional
 
         # Nominal spectrum
         assert q.nominal_spec.state.spectrum_parameters.z == 100
@@ -371,4 +428,17 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.perturbed_spec.state.spectrum_parameters.z == 100
         assert q.perturbed_spec.state.model_parameters.th == 20
         assert q.perturbed_spec.state.model_parameters.kvp == 60
-        assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Pb", pb_thick), ("Air", 1000)] # +5%
+        assert q.perturbed_spec.state.filtration.filters == [("Al", 4.0), ("Cu", 0.6), ("Pb", pb_thick),
+                                                             ("Air", 1000)]  # +5%
+
+        # Integral quantities (not related to dose): (nominal, perturbed, % difference)
+        assert q.get_emean_dev() == pytest.approx(ref_values['dev_fp']['e_mean'])
+        assert q.get_kerma_dev() == pytest.approx(ref_values['dev_fp']['kerma'])
+        assert q.get_hvl1_dev() == pytest.approx(ref_values['dev_fp']['hvl1_al'])
+        assert q.get_hvl2_dev() == pytest.approx(ref_values['dev_fp']['hvl2_al'])
+        assert q.get_hvl1_dev(matl="Cu") == pytest.approx(ref_values['dev_fp']['hvl1_cu'])
+        assert q.get_hvl2_dev(matl="Cu") == pytest.approx(ref_values['dev_fp']['hvl2_cu'])
+
+        # Integral quantities (related to dose): (nominal, perturbed, % difference)
+        assert q.get_hk_mean_dev('h_star_10', 0) == pytest.approx(ref_values['dev_fp']['hk_mean'])
+        assert q.get_dose_equivalent_dev('h_star_10', 0) == pytest.approx(ref_values['dev_fp']['dose'])
