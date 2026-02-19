@@ -3,6 +3,7 @@ pandas
 numpy
 scipy
 spekpy == 2.0.13 # Specific version for compatibility
+statsmodels
 
 # Testing frameworks
 pytest
