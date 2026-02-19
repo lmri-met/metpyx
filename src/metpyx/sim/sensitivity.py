@@ -223,7 +223,7 @@ class QualitySensitivity:
         if self.parameter == "additional_filtration_purity":
             return self._perturb_additional_filtration_purity(perturbed)
 
-        return None # This line should never be reached due to the check in the constructor
+        return None  # This line should never be reached due to the check in the constructor
 
     def _perturb_tube_voltage(self, perturbed):
         """Apply a percentage deviation to the tube high voltage.
@@ -348,42 +348,42 @@ class QualitySensitivity:
         # TODO: add numpy style docstring
         nominal = self.nominal_spec.get_emean(**kwargs)
         perturbed = self.perturbed_spec.get_emean(**kwargs)
-        percentage = abs(perturbed - nominal) / nominal * 100
+        percentage = (perturbed - nominal) / nominal * 100
         return nominal, perturbed, percentage
 
     def get_kerma_dev(self, **kwargs):
         # TODO: add numpy style docstring
         nominal = self.nominal_spec.get_kerma(**kwargs)
         perturbed = self.perturbed_spec.get_kerma(**kwargs)
-        percentage = abs(perturbed - nominal) / nominal * 100
+        percentage = (perturbed - nominal) / nominal * 100
         return nominal, perturbed, percentage
 
     def get_hvl1_dev(self, **kwargs):
         # TODO: add numpy style docstring
         nominal = self.nominal_spec.get_hvl1(**kwargs)
         perturbed = self.perturbed_spec.get_hvl1(**kwargs)
-        percentage = abs(perturbed - nominal) / nominal * 100
+        percentage = (perturbed - nominal) / nominal * 100
         return nominal, perturbed, percentage
 
     def get_hvl2_dev(self, **kwargs):
         # TODO: add numpy style docstring
         nominal = self.nominal_spec.get_hvl2(**kwargs)
         perturbed = self.perturbed_spec.get_hvl2(**kwargs)
-        percentage = abs(perturbed - nominal) / nominal * 100
+        percentage = (perturbed - nominal) / nominal * 100
         return nominal, perturbed, percentage
 
     def get_hk_mean_dev(self, *args, **kwargs):
         # TODO: add numpy style docstring
         nominal = self.nominal_spec.get_hk_mean(*args, **kwargs)
         perturbed = self.perturbed_spec.get_hk_mean(*args, **kwargs)
-        percentage = abs(perturbed - nominal) / nominal * 100
+        percentage = (perturbed - nominal) / nominal * 100
         return nominal, perturbed, percentage
 
     def get_dose_equivalent_dev(self, *args, **kwargs):
         # TODO: add numpy style docstring
         nominal = self.nominal_spec.get_dose_equivalent(*args, **kwargs)
         perturbed = self.perturbed_spec.get_dose_equivalent(*args, **kwargs)
-        percentage = abs(perturbed - nominal) / nominal * 100
+        percentage = (perturbed - nominal) / nominal * 100
         return nominal, perturbed, percentage
 
 
@@ -446,3 +446,28 @@ def get_equivalent_filter(d_mat, p_imp, rho_mat, rho_imp):
     # Superficial densities of the impurity (mg/cm²)
     sigma_mat = rho_mat * d_mat / 10
     return d_imp, sigma_imp, sigma_mat
+
+
+class QualityParametersLimits:
+    """Defines acceptable limits for radiation quality parameters.
+
+    This class provides methods to retrieve the valid ranges for tube
+    voltage and filtration parameters based on project data. These limits can
+    be used for validation or to inform sensitivity analyses.
+    """
+
+    def __init__(self, quality, parameter, deviation, material=None, *args, **kwargs):
+        # Set attributes
+        self.quality = quality
+        self.parameter = parameter
+        self.deviation = deviation
+        self.material = material
+
+    def get_tube_voltage_limit(self):
+        pass
+
+    def get_additional_filtration_thickness_limit(self):
+        pass
+
+    def get_additional_filtration_purity_limit(self):
+        pass
