@@ -665,6 +665,13 @@ class QualityRequirements:
             limit, limit_se, limit_percent_se = None, None, None
             self.requirement = (limit, limit_se, limit_percent_se)
         else:
+            # Warn if both negative and positive deviations are provided, as the limit for the requirement may be
+            # different for positive and negative values of the target requirement
+            has_negative_and_positive = (self.x < 0).any() and (self.x > 0).any()
+            if has_negative_and_positive:
+                warnings.warn("Negative and positive deviations provided: "
+                              "consider evaluating the positive and negative value of the target requirement.")
+
             # Compute requirement for configured target and fitted model and
             # propagate the uncertainty in the slope and intercept
 
