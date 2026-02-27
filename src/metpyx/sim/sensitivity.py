@@ -640,6 +640,8 @@ class QualityRequirements:
         The method stores the computed requirement limit and its uncertainty as an attribute for later use.
         The method checks if the computed limit is within the range of the provided deviations,
         and warns if extrapolation is needed to meet the target requirement.
+        The method warns if both negative and positive deviations are provided,
+        as the limit for the requirement may be different for positive and negative values of the target requirement.
 
         Returns
         -------
