@@ -50,7 +50,7 @@ class QualitySensitivity:
         "additional_filtration_purity",
     }
 
-    def __init__(self, quality, parameter, deviation, material=None, *args, **kwargs):
+    def __init__(self, quality, parameter, deviation, material=None, **kwargs):
         """Initialize a sensitivity analysis for a radiation quality.
 
         This constructor loads nominal quality parameters, applies the requested
@@ -72,7 +72,7 @@ class QualitySensitivity:
         material : str, optional
             Required when ``parameter`` is ``'additional_filtration_purity'``;
             name of the impurity material to add.
-        *args, **kwargs
+        **kwargs
             Forwarded to :class:`Spectrum` when constructing spectrum objects
             (e.g. options controlling spectrum generation).
 
@@ -123,8 +123,8 @@ class QualitySensitivity:
         self.perturbed_params = self._get_perturbed_parameters()
 
         # Initialize Spectrum instances for nominal and perturbed parameters and extract distance and filtration information
-        nominal = self._initialize_spectrum_instance(self.nominal_params, *args, **kwargs)
-        perturbed = self._initialize_spectrum_instance(self.perturbed_params, *args, **kwargs)
+        nominal = self._initialize_spectrum_instance(self.nominal_params, **kwargs)
+        perturbed = self._initialize_spectrum_instance(self.perturbed_params, **kwargs)
 
         # Store the nominal and perturbed filtration parameters formatted for spekpy
         self.nominal_params['spek_filtration'] = nominal['spek_filtration']
@@ -138,7 +138,7 @@ class QualitySensitivity:
         self.distance = nominal['distance']
 
     @staticmethod
-    def _initialize_spectrum_instance(params, *args, **kwargs):
+    def _initialize_spectrum_instance(params, **kwargs):
         """Create and configure a Spectrum instance from parameters.
 
         This helper constructs a :class:`Spectrum` using the provided
@@ -165,7 +165,7 @@ class QualitySensitivity:
               spek interface.
         """
         # Initialize Spectrum objects for nominal and perturbed parameters
-        spek = Spectrum(kvp=params['tube_voltage'], *args, **kwargs)
+        spek = Spectrum(kvp=params['tube_voltage'], **kwargs)
 
         # Get distance from state
         distance = spek.state.spectrum_parameters.z
@@ -517,8 +517,7 @@ class QualityRequirements:
     """
 
     def __init__(self, quality, parameter, quantity, angle, deviations=None, material=None, target=2, r_squared=0.7,
-                 p_value=0.05,
-                 atol=1.0, kwargs=None):
+                 p_value=0.05, atol=1.0, **kwargs):
         # Store arguments as attributes
         self.quality = quality
         self.parameter = parameter
@@ -530,7 +529,7 @@ class QualityRequirements:
         self.r_squared = r_squared
         self.p_value = p_value
         self.atol = atol
-        self.kwargs = kwargs if kwargs is not None else {}
+        self.kwargs = {**kwargs}
         # Storage attributes for results
         self.qs_instances = None
         self.mean_hk = None
@@ -569,7 +568,7 @@ class QualityRequirements:
 
         # Compute the mean conversion coefficient deviations for each parameter deviation
         for d in self.deviations:
-            q = QualitySensitivity(self.quality, self.parameter, d, **self.kwargs)
+            q = QualitySensitivity(self.quality, self.parameter, d, self.material, **self.kwargs)
             out = q.get_hk_mean_dev(self.quantity, self.angle)
             qs_instances.append(q)
             values['nominal'].append(out[0])

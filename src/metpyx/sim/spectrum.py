@@ -18,11 +18,11 @@ class Spectrum(Spek):
 
     Parameters
     ----------
-    **spek_kwargs : dict
+    **kwargs : dict
         Keyword arguments forwarded to the `spekpy.Spek` constructor.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the Spectrum.
 
         Parameters
@@ -30,7 +30,7 @@ class Spectrum(Spek):
         **spek_kwargs : dict
             Keyword arguments forwarded to the parent :class:`spekpy.Spek`.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def get_hk_mean(self, quantity, angle, mu_tr_over_rho_source=None, h_k_source=None):
         """Compute mean air kerma to dose conversion coefficient (Sv/Gy).
@@ -182,7 +182,7 @@ class Quality(Spectrum):
         Source-to-detector distance taken from (cm).
     """
 
-    def __init__(self, quality, *args, **kwargs):
+    def __init__(self, quality, **kwargs):
         """
         Initialize the Quality instance.
 
@@ -202,7 +202,7 @@ class Quality(Spectrum):
         self.total_filtration = q.get_filtration(quality)
 
         # Initialize parent Spek class
-        super().__init__(kvp=self.voltage, *args, **kwargs)
+        super().__init__(kvp=self.voltage, **kwargs)
 
         # Get distance from state and format filtration
         self.distance = self.state.spectrum_parameters.z
