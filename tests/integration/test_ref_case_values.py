@@ -4,7 +4,7 @@ import pytest
 from metpyx.data import Coefficients
 from metpyx.data import OperationalQuantities
 from metpyx.data import Qualities
-from metpyx.sim import Spectrum, Quality, QualitySensitivity
+from metpyx.sim import Spectrum, Quality, QualitySensitivity, QualityRequirements
 
 
 class TestDataValues:
@@ -267,22 +267,22 @@ class TestSimulationQuantitiesSensitivityValues:
     def ref_values(self):
         # See "verification_sim_sensitivity.ipynb" for details on how these values were obtained.
         ref = {
-            'dev_fp': {'dose': (2.476446133301221, 1.8715090700109684, 24.42762857449447),
+            'dev_fp': {'dose': (2.476446133301221, 1.8715090700109684, -24.42762857449447),
                        'e_mean': (47.63300484905786, 48.23922934652791, 1.2726984144525062),
                        'hk_mean': (1.5652667635344535, 1.580794312765024, 0.9920065762789478),
                        'hvl1_al': (5.8582747051770605, 6.055532327046102, 3.3671623779390396),
                        'hvl1_cu': (0.23236896040944352, 0.2435552947430159, 4.814039841578501),
                        'hvl2_al': (6.196968255804022, 6.362159549870954, 2.6656792038948267),
                        'hvl2_cu': (0.25978939890001607, 0.26944828513555114, 3.7179678140956165),
-                       'kerma': (1.5821240129760867, 1.1839042277027458, 25.169947615184817)},
-            'dev_ft': {'dose': (2.476446133301221, 2.2606833305345133, 8.712598261892555),
+                       'kerma': (1.5821240129760867, 1.1839042277027458, -25.169947615184817)},
+            'dev_ft': {'dose': (2.476446133301221, 2.2606833305345133, -8.712598261892555),
                        'e_mean': (47.63300484905786, 47.84934225046291, 0.4541754233027941),
                        'hk_mean': (1.5652667635344535, 1.5709539053877748, 0.3633337131927243),
                        'hvl1_al': (5.8582747051770605, 5.929619001167139, 1.2178380082967142),
                        'hvl1_cu': (0.23236896040944352, 0.23636978049671498, 1.7217532325409766),
                        'hvl2_al': (6.196968255804022, 6.256185361212441, 0.9555818742972599),
                        'hvl2_cu': (0.25978939890001607, 0.26321603063468924, 1.3190036811286363),
-                       'kerma': (1.5821240129760867, 1.439051345033886, 9.043075433326555)},
+                       'kerma': (1.5821240129760867, 1.439051345033886, -9.043075433326555)},
             'dev_hv': {'dose': (2.476446133301221, 3.3211249547037083, 34.10850775407298),
                        'e_mean': (47.63300484905786, 49.2164460260192, 3.324252127236218),
                        'hk_mean': (1.5652667635344535, 1.5888688881461586, 1.5078659536864027),
@@ -442,3 +442,73 @@ class TestSimulationQuantitiesSensitivityValues:
         # Integral quantities (related to dose): (nominal, perturbed, % difference)
         assert q.get_hk_mean_dev('h_star_10', 0) == pytest.approx(ref_values['dev_fp']['hk_mean'])
         assert q.get_dose_equivalent_dev('h_star_10', 0) == pytest.approx(ref_values['dev_fp']['dose'])
+
+
+class TestSimulationQualityRequirementsValues:
+    # Simulation subpackage
+    # Reference case for verification:
+    # - N60 radiation quality.
+    # - Anode angle of 20º.
+    # - H*(10) operational quantity at 0º irradiation angle.
+    # - mass energy transfer coefficients for air from PENELOPE 2018.
+    # - air kerma to dose conversion coefficients from CMI 2025.
+    # - measurement distance at 1 m.
+    # - air thickness equal to distance.
+    # - Deviations of 5% and -5% in tube voltage,
+    # - Deviation of 5% and 10% in additional filtration thickness
+    # - Deviation of 5% and 10% of Pb in additional filtration purity.
+
+    @pytest.fixture()
+    def ref_values(self):
+        # See "verification_sim_requirements.ipynb" for details on how these values were obtained.
+        ref = {
+            'dev_hv': {'x': (-5, 0, 5),
+                       'y': ([-1.7417605772415357, 0.0, 1.5078659536864027]),
+                       'hk_mean': ([1.5380035641185459, 1.5652667635344535, 1.5888688881461586]),
+                       'slope': (0.3249626530927939, 0.013503912387156225, 4.155527491739227),
+                       'intercept': (-0.07796487451837769, 0.055129491466303124, -70.71067811865474),
+                       'limit': (6.394472887088997, 0.31526174405570895, 4.9302225472290315),
+                       'accept_linear': True,
+                       'accept_intercept_zero': True
+                       }
+        }
+        return ref
+
+    def test_high_voltage_requirements(self, ref_values):
+        qr = QualityRequirements("N60", 'tube_voltage', 'h_star_10', 0, deviations=[-5, 0, 5], th=20)
+        x, y = qr.compute_deviations()
+        slope, intercept = qr.fit_model()
+        limit = qr.get_requirement()
+
+        # Constructor
+        assert qr.quality == "N60"
+        assert qr.parameter == 'tube_voltage'
+        assert qr.quantity == 'h_star_10'
+        assert qr.angle == 0
+        assert list(qr.deviations) == [-5, 0, 5]
+        assert qr.target == 2
+        assert qr.r_squared == 0.7
+        assert qr.p_value == 0.05
+        assert qr.atol == 1.0
+        assert qr.kwargs == {'th': 20}
+
+        # Compute deviations
+        assert list(x) == list(qr.x) == pytest.approx(ref_values['dev_hv']['x'])
+        assert list(y) == list(qr.y) == list(qr.mean_hk['deviation']) == pytest.approx(ref_values['dev_hv']['y'])
+        assert qr.mean_hk['nominal'] == [pytest.approx(ref_values['dev_hv']['hk_mean'][1])] * 3
+        assert qr.mean_hk['deviated'] == pytest.approx(ref_values['dev_hv']['hk_mean'])
+
+        # Fit linear model
+        assert slope[0] == qr.slope[0] == pytest.approx(ref_values['dev_hv']['slope'][0])
+        assert slope[1] == qr.slope[1] == pytest.approx(ref_values['dev_hv']['slope'][1])
+        assert slope[2] == qr.slope[2] == pytest.approx(ref_values['dev_hv']['slope'][2])
+        assert intercept[0] == qr.intercept[0] == pytest.approx(ref_values['dev_hv']['intercept'][0])
+        assert intercept[1] == qr.intercept[1] == pytest.approx(ref_values['dev_hv']['intercept'][1])
+        assert intercept[2] == qr.intercept[2] == pytest.approx(ref_values['dev_hv']['intercept'][2])
+        assert qr.accept_linear == ref_values['dev_hv']['accept_linear']
+        assert qr.accept_intercept_zero == ref_values['dev_hv']['accept_intercept_zero']
+
+        # Compute requirement
+        assert limit[0] == qr.requirement[0] == pytest.approx(ref_values['dev_hv']['limit'][0])
+        assert limit[1] == qr.requirement[1] == pytest.approx(ref_values['dev_hv']['limit'][1])
+        assert limit[2] == qr.requirement[2] == pytest.approx(ref_values['dev_hv']['limit'][2])
