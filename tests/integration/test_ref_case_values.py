@@ -140,7 +140,7 @@ class TestSimulationIntegralQuantitiesValues:
 
     @pytest.fixture()
     def ref_values(self):
-        # See "verification_sim_integral_quantities.ipynb" for details on how these values were obtained.
+        # See "integral_quantities.ipynb" for details on how these values were obtained.
         ref = {
             'e_mean': 47.63300484905786,
             'kerma': 1.5821240129760867,
@@ -265,7 +265,7 @@ class TestSimulationQuantitiesSensitivityValues:
 
     @pytest.fixture()
     def ref_values(self):
-        # See "verification_sim_sensitivity.ipynb" for details on how these values were obtained.
+        # See "single_value_perturbation.ipynb" for details on how these values were obtained.
         ref = {
             'dev_fp': {'dose': (2.476446133301221, 1.8715090700109684, -24.42762857449447),
                        'e_mean': (47.63300484905786, 48.23922934652791, 1.2726984144525062),
@@ -460,7 +460,7 @@ class TestSimulationQualityRequirementsValues:
 
     @pytest.fixture()
     def ref_values(self):
-        # See "verification_sim_requirements.ipynb" for details on how these values were obtained.
+        # See "multi_value_perturbation.ipynb" for details on how these values were obtained.
         ref = {
             'dev_hv': {'x': (-5, 0, 5),
                        'y': ([-1.7417605772415357, 0.0, 1.5078659536864027]),
