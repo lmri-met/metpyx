@@ -2,6 +2,6 @@
 # This allows: from metpyx.xdata import Qualities, OperationalQuantities, get_mu_tr_over_rho_air, get_h_k
 
 from .spectrum import Spectrum, Quality, format_filtration_for_spek
-from .sensitivity import QualitySensitivity, QualityRequirements
+from .sensitivity import PerturbedQuality, QualityRequirements
 
-__all__ = ["Spectrum", "Quality", "format_filtration_for_spek", "QualitySensitivity", "QualityRequirements"]
+__all__ = ["Spectrum", "Quality", "format_filtration_for_spek", "PerturbedQuality", "QualityRequirements"]

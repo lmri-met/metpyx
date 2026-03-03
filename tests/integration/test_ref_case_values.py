@@ -4,7 +4,7 @@ import pytest
 from metpyx.xdata import Coefficients
 from metpyx.xdata import OperationalQuantities
 from metpyx.xdata import Qualities
-from metpyx.uspekpy import Spectrum, Quality, QualitySensitivity, QualityRequirements
+from metpyx.uspekpy import Spectrum, Quality, PerturbedQuality, QualityRequirements
 
 
 class TestDataValues:
@@ -295,7 +295,7 @@ class TestSimulationQuantitiesSensitivityValues:
         return ref
 
     def test_perturbed_high_voltage_initialization(self, ref_values):
-        q = QualitySensitivity('N60', 'tube_voltage', 5, th=20)
+        q = PerturbedQuality('N60', 'tube_voltage', 5, th=20)
 
         # Perturbation attributes
         assert q.quality == 'N60'
@@ -343,7 +343,7 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.get_dose_equivalent_dev('h_star_10', 0) == pytest.approx(ref_values['dev_hv']['dose'])
 
     def test_perturbed_additional_filtration_thickness_initialization(self, ref_values):
-        q = QualitySensitivity("N60", 'additional_filtration_thickness', 5, th=20)
+        q = PerturbedQuality("N60", 'additional_filtration_thickness', 5, th=20)
 
         # Perturbation attributes
         assert q.quality == 'N60'
@@ -392,7 +392,7 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.get_dose_equivalent_dev('h_star_10', 0) == pytest.approx(ref_values['dev_ft']['dose'])
 
     def test_perturbed_additional_filtration_purity_initialization(self, ref_values):
-        q = QualitySensitivity("N60", 'additional_filtration_purity', 5, material='Pb', th=20)
+        q = PerturbedQuality("N60", 'additional_filtration_purity', 5, material='Pb', th=20)
 
         # Perturbation attributes
         assert q.quality == 'N60'

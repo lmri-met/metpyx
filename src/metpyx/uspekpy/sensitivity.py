@@ -9,7 +9,7 @@ from metpyx.xdata import Qualities, Densities
 from metpyx.uspekpy import Spectrum, format_filtration_for_spek
 
 
-class QualitySensitivity:
+class PerturbedQuality:
     """Sensitivity analysis for an x-ray radiation quality.
 
     Performs a single-parameter sensitivity analysis by perturbing a specified
@@ -493,7 +493,7 @@ class QualityRequirements:
 
     Attributes
     ----------
-    qs_instances : list of QualitySensitivity or None
+    qs_instances : list of PerturbedQuality or None
         List of ``QualitySensitivity`` instances created for each parameter deviation.
     mean_hk : dict or None
         Dictionary with nominal (Sv/Gy), deviated (Sv/Gy), and deviation (%) values of mean conversion coefficient.
@@ -568,7 +568,7 @@ class QualityRequirements:
 
         # Compute the mean conversion coefficient deviations for each parameter deviation
         for d in self.deviations:
-            q = QualitySensitivity(self.quality, self.parameter, d, self.material, **self.kwargs)
+            q = PerturbedQuality(self.quality, self.parameter, d, self.material, **self.kwargs)
             out = q.get_hk_mean_dev(self.quantity, self.angle)
             qs_instances.append(q)
             values['nominal'].append(out[0])
