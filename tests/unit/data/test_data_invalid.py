@@ -1,10 +1,10 @@
 # Verifies that invalid inputs to data classes raise appropriate exceptions or return expected results.
 import pytest
 
-from metpyx.data.coefficents import Coefficients
-from metpyx.data.densities import Densities
-from metpyx.data.qualities import Qualities
-from metpyx.data.quantities import OperationalQuantities
+from metpyx.xdata.coefficents import Coefficients
+from metpyx.xdata.densities import Densities
+from metpyx.xdata.qualities import Qualities
+from metpyx.xdata.quantities import OperationalQuantities
 
 
 class TestQualitiesInvalidInputs:

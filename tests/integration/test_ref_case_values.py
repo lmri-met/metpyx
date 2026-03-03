@@ -1,9 +1,9 @@
 # Verification of MetPyX numerical values against the values of a reference case
 import pytest
 
-from metpyx.data import Coefficients
-from metpyx.data import OperationalQuantities
-from metpyx.data import Qualities
+from metpyx.xdata import Coefficients
+from metpyx.xdata import OperationalQuantities
+from metpyx.xdata import Qualities
 from metpyx.sim import Spectrum, Quality, QualitySensitivity, QualityRequirements
 
 

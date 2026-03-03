@@ -5,7 +5,7 @@ import numpy as np
 import statsmodels.api as sm
 from matplotlib import pyplot as plt
 
-from metpyx.data import Qualities, Densities
+from metpyx.xdata import Qualities, Densities
 from metpyx.sim import Spectrum, format_filtration_for_spek
 
 

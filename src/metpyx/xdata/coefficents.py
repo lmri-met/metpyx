@@ -2,7 +2,7 @@ import importlib.resources as resources
 
 import pandas as pd
 
-from metpyx.data import OperationalQuantities
+from metpyx.xdata import OperationalQuantities
 
 
 class Coefficients:
@@ -23,7 +23,7 @@ class Coefficients:
     """
 
     MU_TR = {
-        "pkg": "metpyx.data.tables.mu_tr_over_rho_air",
+        "pkg": "metpyx.xdata.tables.mu_tr_over_rho_air",
         "default": "pene_2018",
         "sources": {
             "pene_2018": {
@@ -34,7 +34,7 @@ class Coefficients:
         }
     }
     H_K = {
-        "pkg": "metpyx.data.tables.h_k",
+        "pkg": "metpyx.xdata.tables.h_k",
         "default": "cmi_2025",
         "sources": {
             "cmi_2025": {

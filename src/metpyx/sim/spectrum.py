@@ -4,8 +4,8 @@ import numpy as np
 from scipy.interpolate import Akima1DInterpolator
 from spekpy import Spek
 
-from metpyx.data import Coefficients
-from metpyx.data import Qualities
+from metpyx.xdata import Coefficients
+from metpyx.xdata import Qualities
 
 
 class Spectrum(Spek):

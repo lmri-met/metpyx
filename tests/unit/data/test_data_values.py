@@ -1,7 +1,7 @@
 # Verification of the values in the data classes, to ensure they are correct and consistent with the references.
-from metpyx.data.densities import Densities
-from metpyx.data.qualities import Qualities
-from metpyx.data.quantities import OperationalQuantities
+from metpyx.xdata.densities import Densities
+from metpyx.xdata.qualities import Qualities
+from metpyx.xdata.quantities import OperationalQuantities
 
 
 class TestQualitiesValues:
