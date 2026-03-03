@@ -4,7 +4,7 @@ import pytest
 from metpyx.xdata import Coefficients
 from metpyx.xdata import OperationalQuantities
 from metpyx.xdata import Qualities
-from metpyx.sim import Spectrum, Quality, QualitySensitivity, QualityRequirements
+from metpyx.uspekpy import Spectrum, Quality, QualitySensitivity, QualityRequirements
 
 
 class TestDataValues:

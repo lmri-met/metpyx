@@ -6,7 +6,7 @@ import statsmodels.api as sm
 from matplotlib import pyplot as plt
 
 from metpyx.xdata import Qualities, Densities
-from metpyx.sim import Spectrum, format_filtration_for_spek
+from metpyx.uspekpy import Spectrum, format_filtration_for_spek
 
 
 class QualitySensitivity:
@@ -457,7 +457,7 @@ class QualityRequirements:
     """
     Compute linear relationship between a parameter deviation (e.g. tube voltage)
     and the mean air-kerma-to-dose conversion coefficient deviation, using
-    metpyx.sim.QualitySensitivity for the underlying simulations.
+    metpyx.uspekpy.QualitySensitivity for the underlying simulations.
 
     Parameters
     ----------

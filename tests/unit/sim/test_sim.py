@@ -1,6 +1,6 @@
 import pytest
 
-from metpyx.sim.sensitivity import QualitySensitivity
+from metpyx.uspekpy.sensitivity import QualitySensitivity
 
 
 class TestQualitySensitivityInvalidInputs:

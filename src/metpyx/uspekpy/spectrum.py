@@ -154,7 +154,7 @@ class Quality(Spectrum):
     """
     Spectrum subclass initialized from a named X-ray quality.
 
-    This class constructs a ``metpyx.sim.Spectrum`` using standard named
+    This class constructs a ``metpyx.uspekpy.Spectrum`` using standard named
     X-ray qualities (for example, ``'N60'``). It looks up the nominal
     tube voltage and the total filtration for the named quality from the
     package's `Qualities` registry, initializes the parent ``Spectrum``
