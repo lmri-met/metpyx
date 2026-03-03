@@ -7,7 +7,7 @@ from metpyx.xdata import Qualities
 from metpyx.uspekpy import Spectrum, Quality, PerturbedQuality, QualitySensitivity
 
 
-class TestDataValues:
+class TestXrayDataValues:
     # Data subpackage
     # Reference case for verification:
     # - N60 radiation quality.
@@ -249,7 +249,7 @@ class TestSimulationIntegralQuantitiesValues:
         assert mq.get_dose_equivalent('h_star_10', 0) == pytest.approx(ref_values['dose'])
 
 
-class TestSimulationQuantitiesSensitivityValues:
+class TestSimulationSingleValuePerturbation:
     # Simulation subpackage
     # Reference case for verification:
     # - N60 radiation quality.
@@ -444,7 +444,7 @@ class TestSimulationQuantitiesSensitivityValues:
         assert q.get_dose_equivalent_dev('h_star_10', 0) == pytest.approx(ref_values['dev_fp']['dose'])
 
 
-class TestSimulationQualityRequirementsValues:
+class TestSimulationMultiValuePerturbation:
     # Simulation subpackage
     # Reference case for verification:
     # - N60 radiation quality.
