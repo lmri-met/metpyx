@@ -4,7 +4,7 @@ import pytest
 from metpyx.xdata import Coefficients
 from metpyx.xdata import OperationalQuantities
 from metpyx.xdata import Qualities
-from metpyx.uspekpy import Spectrum, Quality, PerturbedQuality, QualityRequirements
+from metpyx.uspekpy import Spectrum, Quality, PerturbedQuality, QualitySensitivity
 
 
 class TestDataValues:
@@ -475,7 +475,7 @@ class TestSimulationQualityRequirementsValues:
         return ref
 
     def test_high_voltage_requirements(self, ref_values):
-        qr = QualityRequirements("N60", 'tube_voltage', 'h_star_10', 0, deviations=[-5, 0, 5], th=20)
+        qr = QualitySensitivity("N60", 'tube_voltage', 'h_star_10', 0, deviations=[-5, 0, 5], th=20)
         x, y = qr.compute_deviations()
         slope, intercept = qr.fit_model()
         limit = qr.get_requirement()

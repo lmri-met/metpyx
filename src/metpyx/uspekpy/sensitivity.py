@@ -453,7 +453,7 @@ def get_equivalent_filter(d_mat, p_imp, rho_mat, rho_imp):
     return d_imp, sigma_imp, sigma_mat
 
 
-class QualityRequirements:
+class QualitySensitivity:
     """
     Compute linear relationship between a parameter deviation (e.g. tube voltage)
     and the mean air-kerma-to-dose conversion coefficient deviation, using
