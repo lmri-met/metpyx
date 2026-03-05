@@ -487,16 +487,16 @@ class TestSimulationMultiValuePerturbation:
         assert qr.angle == 0
         assert list(qr.deviations) == [-5, 0, 5]
         assert qr.target == 2
-        assert qr.r_squared == 0.7
-        assert qr.p_value == 0.05
-        assert qr.atol == 1.0
+        assert qr.r_squared_threshold == 0.7
+        assert qr.p_value_threshold == 0.05
+        assert qr.atol_threshold == 1.0
         assert qr.kwargs == {'th': 20}
 
         # Compute deviations
         assert list(x) == list(qr.x) == pytest.approx(ref_values['dev_hv']['x'])
-        assert list(y) == list(qr.y) == list(qr.mean_hk['deviation']) == pytest.approx(ref_values['dev_hv']['y'])
-        assert qr.mean_hk['nominal'] == [pytest.approx(ref_values['dev_hv']['hk_mean'][1])] * 3
-        assert qr.mean_hk['deviated'] == pytest.approx(ref_values['dev_hv']['hk_mean'])
+        assert list(y) == list(qr.y) == list(qr.hk_dev['deviation']) == pytest.approx(ref_values['dev_hv']['y'])
+        assert qr.hk_dev['nominal'] == [pytest.approx(ref_values['dev_hv']['hk_mean'][1])] * 3
+        assert qr.hk_dev['deviated'] == pytest.approx(ref_values['dev_hv']['hk_mean'])
 
         # Fit linear model
         assert slope[0] == qr.slope[0] == pytest.approx(ref_values['dev_hv']['slope'][0])

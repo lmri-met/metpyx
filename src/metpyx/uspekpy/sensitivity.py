@@ -493,15 +493,15 @@ class QualitySensitivity:
 
     Attributes
     ----------
-    qs_instances : list of PerturbedQuality or None
+    pert_qs : list of PerturbedQuality or None
         List of ``QualitySensitivity`` instances created for each parameter deviation.
-    mean_hk : dict or None
+    hk_dev : dict or None
         Dictionary with nominal (Sv/Gy), deviated (Sv/Gy), and deviation (%) values of mean conversion coefficient.
         Keys are ``'nominal'``, ``'deviated'``, ``'deviation'``.
     x, y : ndarray or None
         Independent and dependent variables used for the fit:
         parameter deviations and mean conversion coefficient deviations, respectively.
-    sm_results : statsmodels RegressionResults or None
+    fit_results : statsmodels RegressionResults or None
         Fitted OLS results.
     slope, intercept : tuple or None
         Tuples with (value, standard error, percent standard error) for slope and intercept.
@@ -516,8 +516,7 @@ class QualitySensitivity:
         Whether the computed limit is outside the supplied deviation range.
     """
 
-    def __init__(self, quality, parameter, quantity, angle, deviations=None, material=None, target=2, r_squared=0.7,
-                 p_value=0.05, atol=1.0, **kwargs):
+    def __init__(self, quality, parameter, quantity, angle, deviations=None, material=None, **kwargs):
         # Store arguments as attributes
         self.quality = quality
         self.parameter = parameter
@@ -525,21 +524,24 @@ class QualitySensitivity:
         self.angle = angle
         self.deviations = (np.asarray(deviations) if deviations is not None else np.linspace(0, 10, 11))
         self.material = material
-        self.target = target
-        self.r_squared = r_squared
-        self.p_value = p_value
-        self.atol = atol
         self.kwargs = {**kwargs}
         # Storage attributes for results
-        self.qs_instances = None
-        self.mean_hk = None
+        # Deviations
+        self.pert_qs = None
+        self.hk_dev = None
         self.x = None
         self.y = None
-        self.sm_results = None
+        # Fit
+        self.r_squared_threshold = None
+        self.p_value_threshold = None
+        self.atol_threshold = None
+        self.fit_results = None
         self.slope = None
         self.intercept = None
         self.accept_linear = None
         self.accept_intercept_zero = None
+        # Requirement
+        self.target = None
         self.requirement = None
         self.extrapolation_needed = None
 
@@ -576,8 +578,8 @@ class QualitySensitivity:
             values['deviation'].append(out[2])
 
         # Store the results in attributes for later use
-        self.qs_instances = qs_instances
-        self.mean_hk = values
+        self.pert_qs = qs_instances
+        self.hk_dev = values
         self.x = np.asarray(self.deviations, dtype=float)
         self.y = np.asarray(values['deviation'], dtype=float)
 
@@ -586,7 +588,7 @@ class QualitySensitivity:
 
         return self.x, self.y
 
-    def fit_model(self):
+    def fit_model(self, r_squared=0.7, p_value=0.05, atol=1.0,):
         """
         Fit a linear model between the mean conversion coefficient deviation and the parameter deviation.
 
@@ -606,6 +608,10 @@ class QualitySensitivity:
         intercept : tuple
             ``(estimate, standard_error, percent_standard_error)`` for the intercept.
         """
+        self.r_squared_threshold = r_squared
+        self.p_value_threshold = p_value
+        self.atol_threshold = atol
+
         # Check if deviations have been computed, if not compute them
         if self.x is None or self.y is None:
             self.compute_deviations()
@@ -620,7 +626,7 @@ class QualitySensitivity:
         intercept_se, slope_se = res.bse
 
         # Store the results in attributes for later use
-        self.sm_results = res
+        self.fit_results = res
         self.slope = (slope, slope_se, slope_se / slope * 100)
         self.intercept = (intercept, intercept_se, intercept_se / intercept * 100)
 
@@ -630,7 +636,7 @@ class QualitySensitivity:
 
         return self.slope, self.intercept
 
-    def get_requirement(self):
+    def get_requirement(self, target=2):
         """
         Compute the parameter deviation limit that corresponds to the configured
         ``target`` mean conversion coefficient deviation using the fitted linear model.
@@ -654,9 +660,11 @@ class QualitySensitivity:
         If the slope is (approximately) zero, ``(None, None, None)`` is returned
         and a warning is issued.
         """
+        # Store the target requirement in an attribute for later use
+        self.target = target
 
         # Check if the model has been fitted, if not fit it
-        if self.sm_results is None:
+        if self.fit_results is None:
             self.fit_model()
 
         # Check that the slope is not approximately zero to avoid division by zero when calculating the requirement
@@ -677,7 +685,6 @@ class QualitySensitivity:
             # propagate the uncertainty in the slope and intercept
 
             # Extract the slope and intercept estimates and their standard errors from the fitted model
-            target = self.target
             slope, slope_se = self.slope[0], self.slope[1]
             intercept, intercept_se = self.intercept[0], self.intercept[1]
 
@@ -751,18 +758,18 @@ class QualitySensitivity:
             If the model has not been fitted.
         """
         # Check if the model has been fitted, if not raise an error
-        if self.sm_results is None:
+        if self.fit_results is None:
             raise RuntimeError("Model not fitted: please run `fit_model()` before calling `check_linearity()`.")
 
         # Evaluate linearity criteria: slope p-value < threshold and R² > threshold
-        slope_pvalue = self.sm_results.pvalues[1]
-        r_squared = self.sm_results.rsquared
-        self.accept_linear = (slope_pvalue < self.p_value) and (r_squared > self.r_squared)
+        slope_pvalue = self.fit_results.pvalues[1]
+        r_squared = self.fit_results.rsquared
+        self.accept_linear = (slope_pvalue < self.p_value_threshold) and (r_squared > self.r_squared_threshold)
 
         # Warn if linearity criteria are not met
         if not self.accept_linear:
             warnings.warn(f"The linear model may not be a good fit for the data."
-                          f"Linearity criteria: slope p-value < {self.p_value} and R² > {self.r_squared}."
+                          f"Linearity criteria: slope p-value < {self.p_value_threshold} and R² > {self.r_squared_threshold}."
                           f"Found values: slope p-value = {slope_pvalue}, R² = {r_squared}.")
         return self.accept_linear
 
@@ -788,25 +795,25 @@ class QualitySensitivity:
             If the model has not been fitted.
         """
         # Check if the model has been fitted, if not raise an error
-        if self.sm_results is None:
+        if self.fit_results is None:
             raise RuntimeError("Model not fitted: please run `fit_model()` before calling `check_intercept()`.")
 
         # Evaluate if intercept is not significantly different from zero based on the configured criteria:
         # Statistical criteria: intercept p-value > threshold and 95% confidence interval includes zero.
         # Practical criteria: the fitted intercept is close to zero within the absolute tolerance configured.
-        intercept_pvalue = self.sm_results.pvalues[0]
-        intercept_ci = self.sm_results.conf_int(alpha=0.05)[0]
-        intercept = self.sm_results.params[0]
-        statistical = (intercept_pvalue > self.p_value) and (intercept_ci[0] < 0 < intercept_ci[1])
-        practical = np.isclose(intercept, 0.0, atol=self.atol)
+        intercept_pvalue = self.fit_results.pvalues[0]
+        intercept_ci = self.fit_results.conf_int(alpha=0.05)[0]
+        intercept = self.fit_results.params[0]
+        statistical = (intercept_pvalue > self.p_value_threshold) and (intercept_ci[0] < 0 < intercept_ci[1])
+        practical = np.isclose(intercept, 0.0, atol=self.atol_threshold)
         self.accept_intercept_zero = statistical and practical
 
         # Warn if the intercept is significantly different from zero
         if not self.accept_intercept_zero:
             warnings.warn(f"The intercept of the linear fit is significantly different from zero."
                           f"Intercept criteria:"
-                          f"Statistical: intercept p-value > {self.p_value} and 95% CI includes zero"
-                          f"Practical: absolute difference below {self.atol} percentage point"
+                          f"Statistical: intercept p-value > {self.p_value_threshold} and 95% CI includes zero"
+                          f"Practical: absolute difference below {self.atol_threshold} percentage point"
                           f"Found values: "
                           f"intercept p-value = {intercept_pvalue}, 95% CI = [{intercept_ci[0]}, {intercept_ci[1]}], "
                           f"absolute difference = {abs(intercept)} percentage points.")
@@ -883,7 +890,7 @@ class QualitySensitivity:
             If the model has not been fitted.
         """
         # Check if the model has been fitted, if not raise an error
-        if self.x is None or self.y is None or self.sm_results is None:
+        if self.x is None or self.y is None or self.fit_results is None:
             raise RuntimeError("Model not fitted: please run `fit_model()` before calling `plot_fit()`.")
 
         # Set default values for plot aesthetics if not provided
@@ -898,7 +905,7 @@ class QualitySensitivity:
 
         # Generate points for the fitted line
         xs = np.linspace(self.x.min(), self.x.max(), 200)
-        intercept, slope = self.sm_results.params
+        intercept, slope = self.fit_results.params
         ys = intercept + slope * xs
 
         # Create the plot if no axes were provided
@@ -949,7 +956,7 @@ class QualitySensitivity:
             If the model has not been fitted.
         """
         # Check if the model has been fitted, if not raise an error
-        if self.sm_results is None:
+        if self.fit_results is None:
             raise RuntimeError("Model not fitted: please run `fit_model()` before calling `plot_residuals()`.")
 
         # Set default title if not provided
@@ -957,8 +964,8 @@ class QualitySensitivity:
         title = title if title is not None else default_title
 
         # Get fitted values and residuals from the fitted model
-        fitted = self.sm_results.fittedvalues
-        resid = self.sm_results.resid
+        fitted = self.fit_results.fittedvalues
+        resid = self.fit_results.resid
 
         # Create the plot if no axes were provided
         if ax is None:
